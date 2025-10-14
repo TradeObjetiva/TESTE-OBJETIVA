@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Controle de Atendimento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="./styles.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-0">
+                <div class="logo">
+                    <i class="fas fa-chart-line"></i> Controle Atendimento
+                </div>
+                <div class="d-flex flex-column p-3">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a href="#dashboard" class="nav-link active" data-bs-toggle="tab">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#importar" class="nav-link" data-bs-toggle="tab">
+                                <i class="fas fa-file-import"></i> Importar Dados
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#colaboradores" class="nav-link" data-bs-toggle="tab">
+                                <i class="fas fa-users"></i> Colaboradores
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#lojas" class="nav-link" data-bs-toggle="tab">
+                                <i class="fas fa-store"></i> Lojas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#agenda" class="nav-link" data-bs-toggle="tab">
+                                <i class="fas fa-calendar-alt"></i> Agenda
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#relatorios" class="nav-link" data-bs-toggle="tab">
+                                <i class="fas fa-chart-bar"></i> Relatórios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#analises" class="nav-link" data-bs-toggle="tab">
+                                <i class="fas fa-chart-line"></i> Análises
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="tab-content">
+
+                    <!-- Dashboard -->
+                    <div class="tab-pane fade show active" id="dashboard">
+                        <h2 class="mb-4">Dashboard de Atendimento</h2>
+
+                        <div class="toolbar-adicional">
+                            <div class="toolbar-buttons">
+                                <button class="btn btn-outline-primary" id="btn-fazer-backup">
+                                    <i class="fas fa-download me-2"></i>Fazer Backup
+                                </button>
+                                <button class="btn btn-outline-success" id="btn-otimizar-rotas">
+                                    <i class="fas fa-route me-2"></i>Otimizar Rotas
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-4">
+                                <div class="card stat-card bg-primary text-white">
+                                    <i class="fas fa-users"></i>
+                                    <div class="number" id="total-colaboradores">0</div>
+                                    <div>Total Colaboradores</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-4">
+                                <div class="card stat-card bg-success text-white">
+                                    <i class="fas fa-store"></i>
+                                    <div class="number" id="total-lojas">0</div>
+                                    <div>Total Lojas</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-4">
+                                <div class="card stat-card bg-warning text-white">
+                                    <i class="fas fa-calendar-day"></i>
+                                    <div class="number" id="visitas-hoje">0</div>
+                                    <div>Visitas Hoje</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-4">
+                                <div class="card stat-card bg-info text-white">
+                                    <i class="fas fa-clock"></i>
+                                    <div class="number" id="horas-totais">0</div>
+                                    <div>Horas Totais/Dia</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-chart-bar me-2"></i>Distribuição de Horas por Dia da
+                                            Semana</span>
+                                        <div class="horas-meta">
+                                            <i class="fas fa-bullseye me-1"></i>Meta: Seg–Sex 8h, Sáb 4h por colaborador
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="dashboard-horas"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-palette me-2"></i>Legenda da Agenda
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="day-hours me-2">8h</span>
+                                                    <span>Horas normais (Seg-Sex)</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="day-hours day-extra me-2">10h</span>
+                                                    <span>Horas extras (Seg-Sex)</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="day-hours day-sabado-extra me-2">6h</span>
+                                                    <span>Horas extras (Sábado)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <hr>
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="total-hours total-normal me-2">40h</span>
+                                                    <span>Total semanal normal (até 44h)</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="total-hours total-extra me-2">48h</span>
+                                                    <span>Total semanal extra (acima de 44h)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="legenda-totais mt-3">
+                                            <div class="legenda-item">
+                                                <div class="legenda-cor legenda-normal"></div>
+                                                <span>Dia normal (Seg-Sex: até 8h)</span>
+                                            </div>
+                                            <div class="legenda-item">
+                                                <div class="legenda-cor legenda-dia-extra"></div>
+                                                <span>Dia extra (Seg-Sex: acima de 8h)</span>
+                                            </div>
+                                            <div class="legenda-item">
+                                                <div class="legenda-cor legenda-sabado-extra"></div>
+                                                <span>Sábado extra (acima de 4h)</span>
+                                            </div>
+                                            <div class="legenda-item">
+                                                <div class="legenda-cor legenda-normal"></div>
+                                                <span>Total normal (até 44h/semana)</span>
+                                            </div>
+                                            <div class="legenda-item">
+                                                <div class="legenda-cor legenda-extra"></div>
+                                                <span>Total extra (acima de 44h/semana)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Importar Dados -->
+                    <div class="tab-pane fade" id="importar">
+                        <h2 class="mb-4">Importar Dados</h2>
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-file-import me-2"></i>Importar Planilha Excel
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4">
+                                    <p>Selecione o arquivo Excel para importar os dados do planejamento:</p>
+                                    <ul>
+                                        <li>Formatos suportados: .xlsx, .xls</li>
+                                        <li>Os dados serão processados automaticamente</li>
+                                        <li>As informações serão salvas localmente no seu navegador</li>
+                                    </ul>
+                                </div>
+
+                                <div class="file-drop-area" id="file-drop-area">
+                                    <i class="fas fa-file-excel"></i>
+                                    <h5>Arraste o arquivo Excel aqui</h5>
+                                    <p class="text-muted">ou clique para selecionar</p>
+                                    <input type="file" id="file-input" accept=".xlsx,.xls" hidden>
+                                    <button type="button" class="btn btn-primary"
+                                        onclick="document.getElementById('file-input').click()">
+                                        <i class="fas fa-folder-open me-2"></i>Selecionar Arquivo
+                                    </button>
+                                </div>
+
+                                <div id="file-info" class="mt-3"></div>
+
+                                <div id="preview-data" class="mt-4" style="display: none;">
+                                    <h5>Pré-visualização dos Dados</h5>
+                                    <div class="preview-table">
+                                        <table class="table table-bordered table-sm" id="preview-table">
+                                            <thead>
+                                                <tr></tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                    <button id="btn-confirmar-importacao" class="btn btn-success mt-3">
+                                        <i class="fas fa-check me-2"></i>Confirmar Importação
+                                    </button>
+                                </div>
+
+                                <div id="import-status" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Colaboradores -->
+                    <div class="tab-pane fade" id="colaboradores">
+                        <h2 class="mb-4">Colaboradores</h2>
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-users me-2"></i>Lista de Colaboradores</span>
+                                <span class="badge bg-primary" id="badge-total-colaboradores">0</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="tabela-colaboradores">
+                                        <thead>
+                                            <tr>
+                                                <th>Nome</th>
+                                                <th>ID</th>
+                                                <th>Lojas Atendidas</th>
+                                                <th>Horas/Dia</th>
+                                                <th>Visitas/Semana</th>
+                                                <th>Eficiência</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lojas -->
+                    <div class="tab-pane fade" id="lojas">
+                        <h2 class="mb-4">Lojas</h2>
+
+                        <div class="filtro-atividade-lojas">
+                            <div class="filtro-header">
+                                <h6><i class="fas fa-filter me-2"></i>Filtrar por Atividade</h6>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="select-filtro-atividade-lojas">
+                                        <option value="todas">Todas as Atividades</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-secondary w-100" id="btn-limpar-filtro">
+                                        <i class="fas fa-times me-2"></i>Limpar Filtro
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-store me-2"></i>Lista de Lojas</span>
+                                <span class="badge bg-primary" id="badge-total-lojas">0</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="tabela-lojas">
+                                        <thead>
+                                            <tr>
+                                                <th>Nome</th>
+                                                <th>Rede</th>
+                                                <th>Bairro</th>
+                                                <th>Município</th>
+                                                <th>Colaboradores</th>
+                                                <th>Visitas/Semana</th>
+                                                <th>Horas/Semana</th>
+                                                <th>Atividades</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Agenda -->
+                    <div class="tab-pane fade" id="agenda">
+                        <h2 class="mb-4">Agenda Semanal</h2>
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-calendar-alt me-2"></i>Visualização da Semana</span>
+                                <div class="agenda-controls">
+                                    <button class="btn btn-sm btn-outline-primary me-2" id="btn-toggle-view">
+                                        <i class="fas fa-expand"></i> Visualização Detalhada
+                                    </button>
+                                    <button class="btn btn-sm btn-success me-2" id="btn-export-agenda">
+                                        <i class="fas fa-download"></i> Exportar
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" id="btn-edit-agenda">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="select-colaborador-agenda" class="form-label">Filtrar por
+                                        Colaborador:</label>
+                                    <select class="form-select" id="select-colaborador-agenda">
+                                        <option value="todos">Todos os Colaboradores</option>
+                                    </select>
+                                </div>
+
+                                <div class="table-responsive agenda-table-container">
+                                    <table class="table table-bordered agenda-table" id="tabela-agenda">
+                                        <thead>
+                                            <tr>
+                                                <th width="250">Colaborador / Loja</th>
+                                                <th class="day-column">Seg</th>
+                                                <th class="day-column">Ter</th>
+                                                <th class="day-column">Qua</th>
+                                                <th class="day-column">Qui</th>
+                                                <th class="day-column">Sex</th>
+                                                <th class="day-column">Sáb</th>
+                                                <th class="total-column">Total Semanal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabela-agenda-body"></tbody>
+                                    </table>
+                                </div>
+
+                                <div id="agenda-editor" class="mt-4" style="display: none;">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <span><i class="fas fa-edit me-2"></i>Editor de Agenda</span>
+                                            <div>
+                                                <button class="btn btn-sm btn-success me-2" id="btn-save-agenda">
+                                                    <i class="fas fa-save"></i> Salvar Alterações
+                                                </button>
+                                                <button class="btn btn-sm btn-secondary" id="btn-cancel-edit">
+                                                    <i class="fas fa-times"></i> Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered table-editable"
+                                                    id="tabela-agenda-editor">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Colaborador</th>
+                                                            <th>Loja</th>
+                                                            <th>Atividade</th>
+                                                            <th>Seg</th>
+                                                            <th>Ter</th>
+                                                            <th>Qua</th>
+                                                            <th>Qui</th>
+                                                            <th>Sex</th>
+                                                            <th>Sáb</th>
+                                                            <th>Horas</th>
+                                                            <th>Frequência</th>
+                                                            <th>Ações</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tabela-agenda-editor-body"></tbody>
+                                                </table>
+                                            </div>
+                                            <button class="btn btn-primary mt-3" id="btn-add-visita">
+                                                <i class="fas fa-plus"></i> Adicionar Nova Visita
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Relatórios -->
+                    <div class="tab-pane fade" id="relatorios">
+                        <h2 class="mb-4">Relatórios</h2>
+
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="fas fa-calendar-day me-2"></i>Relatório por Dia da Semana
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="select-dia" class="form-label">Selecione o dia:</label>
+                                        <select id="select-dia" class="form-select">
+                                            <option value="segunda">Segunda-feira</option>
+                                            <option value="terca">Terça-feira</option>
+                                            <option value="quarta">Quarta-feira</option>
+                                            <option value="quinta">Quinta-feira</option>
+                                            <option value="sexta">Sexta-feira</option>
+                                            <option value="sabado">Sábado</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <button id="btn-gerar-relatorio-dia" class="btn btn-primary">
+                                            <i class="fas fa-chart-bar me-2"></i>Gerar Relatório
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="relatorio-dia"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-user me-2"></i>Relatório por Colaborador
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="select-colaborador" class="form-label">Selecione o
+                                            colaborador:</label>
+                                        <select id="select-colaborador" class="form-select"></select>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <button id="btn-gerar-relatorio-colab" class="btn btn-primary">
+                                            <i class="fas fa-chart-bar me-2"></i>Gerar Relatório
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="relatorio-colaborador"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análises -->
+                    <div class="tab-pane fade" id="analises">
+                        <h2 class="mb-4">Análises e Insights</h2>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-lightbulb me-2"></i>Análises de Eficiência
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="analises-eficiencia">
+                                            <p class="text-muted">Carregando análises...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Alertas e Oportunidades
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="alertas-sistema">
+                                            <p class="text-muted">Carregando alertas...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./app.js"></script>
+</body>
+
+</html>
