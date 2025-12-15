@@ -882,6 +882,8 @@ document.addEventListener("DOMContentLoaded", function () {
             report.destino,
             report.bilhetagem,
             report.modal,
+            report.numeroLinha || '-',
+            report.tipoLinha || '-',
             report.integracao || 'NÃO',
             `R$ ${report.valor.toFixed(2)}`
         ];
@@ -958,7 +960,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const emptyRow = document.createElement('tr');
             emptyRow.className = 'empty-row';
             emptyRow.innerHTML = `
-                <td colspan="8">
+                <td colspan="10">
                     <div class="empty-state">
                         <i class="fas fa-clipboard-list"></i>
                         <p>Nenhuma passagem registrada ainda</p>
@@ -984,7 +986,7 @@ document.addEventListener("DOMContentLoaded", function () {
             reports = [];
             reportTableBody.innerHTML = `
                 <tr class="empty-row">
-                    <td colspan="8">
+                    <td colspan="10">
                         <div class="empty-state">
                             <i class="fas fa-clipboard-list"></i>
                             <p>Nenhuma passagem registrada ainda</p>
@@ -1055,7 +1057,16 @@ document.addEventListener("DOMContentLoaded", function () {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Página 1: Dados do colaborador
+            // Página 1: Logo e dados do colaborador
+            const logoImg = document.getElementById('logoPdfSource');
+            if (logoImg && logoImg.complete) {
+                try {
+                    doc.addImage(logoImg, 'PNG', 15, 10, 30, 15);
+                } catch (e) {
+                    console.warn('Não foi possível incluir o logo no PDF:', e);
+                }
+            }
+
             doc.setFontSize(16);
             doc.text("RELATÓRIO DE PASSAGEM", 105, 20, { align: 'center' });
 
@@ -1143,13 +1154,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
             doc.autoTable({
                 startY: 30,
-                head: [['DIA', 'ORIGEM', 'DESTINO', 'BILHETAGEM', 'MODAL', 'VALOR', 'INTEGRAÇÃO']],
+                head: [[
+                    'DIA',
+                    'ORIGEM',
+                    'DESTINO',
+                    'BILHETAGEM',
+                    'MODAL',
+                    'Nº LINHA',
+                    'TIPO DE LINHA',
+                    'VALOR',
+                    'INTEGRAÇÃO'
+                ]],
                 body: reports.map(report => [
                     report.dataVisita,
                     report.ida,
                     report.destino,
                     report.bilhetagem,
                     report.modal,
+                    report.numeroLinha || '-',
+                    report.tipoLinha || '-',
                     'R$ ' + report.valor.toFixed(2),
                     report.integracao || 'NÃO'
                 ]),
@@ -1171,18 +1194,52 @@ document.addEventListener("DOMContentLoaded", function () {
             doc.text(`Total de Passagens: ${reports.length}`, 20, 40);
             doc.text(`Total Gasto: R$ ${total.toFixed(2)}`, 20, 50);
             doc.text(`Dias com Registro: ${dias}`, 20, 60);
-            doc.text(`Média Diária: R$ ${media.toFixed(2)}`, 20, 70);
+            doc.text(`Média Diária (R$/dia): R$ ${media.toFixed(2)}`, 20, 70);
 
-            // Totais por dia
+            // Médias por tipo de bilhetagem
+            const statsBilhetagem = {};
+            reports.forEach(r => {
+                const key = r.bilhetagem;
+                if (!statsBilhetagem[key]) {
+                    statsBilhetagem[key] = { total: 0, count: 0 };
+                }
+                statsBilhetagem[key].total += r.valor;
+                statsBilhetagem[key].count += 1;
+            });
+
             doc.setFontSize(14);
-            doc.text("TOTAIS POR DIA DA SEMANA", 105, 90, { align: 'center' });
+            doc.text("MÉDIA POR TIPO DE BILHETAGEM", 105, 90, { align: 'center' });
 
             let yPos = 100;
-            for (const [day, totalDay] of Object.entries(dailyTotals)) {
-                doc.setFontSize(10);
-                doc.text(`${day}: R$ ${totalDay.toFixed(2)}`, 20, yPos);
-                yPos += 10;
-            }
+            doc.setFontSize(10);
+            Object.entries(statsBilhetagem).forEach(([tipo, info]) => {
+                const mediaTipo = info.total / info.count;
+                doc.text(`${tipo}: R$ ${mediaTipo.toFixed(2)}`, 20, yPos);
+                yPos += 8;
+            });
+
+            // Médias por dia da semana
+            const statsDia = {};
+            reports.forEach(r => {
+                const diaSemana = r.dataVisita;
+                if (!statsDia[diaSemana]) {
+                    statsDia[diaSemana] = { total: 0, count: 0 };
+                }
+                statsDia[diaSemana].total += r.valor;
+                statsDia[diaSemana].count += 1;
+            });
+
+            yPos += 8;
+            doc.setFontSize(14);
+            doc.text("MÉDIA POR DIA DA SEMANA", 105, yPos, { align: 'center' });
+            yPos += 10;
+
+            doc.setFontSize(10);
+            Object.entries(statsDia).forEach(([diaSemana, info]) => {
+                const mediaDia = info.total / info.count;
+                doc.text(`${diaSemana}: R$ ${mediaDia.toFixed(2)}`, 20, yPos);
+                yPos += 8;
+            });
 
             doc.save(`Relatorio_Passagem_${colaboradorData.nomeCompleto.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
 
