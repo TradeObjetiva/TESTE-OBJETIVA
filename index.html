@@ -17,11 +17,11 @@
         <header>
             <div class="header-logo">
                 <div class="logo-placeholder">
-                    <i class="fas fa-bus"></i>
+                    <img src="LOGO_OFICIAL_OBJETIVA.png.png" alt="Logo Objetiva MKT" class="logo-img">
                 </div>
                 <div class="header-title">
                     <h1>Relatório de Passagem</h1>
-                    <p class="subtitle">Sistema de registro de deslocamentos</p>
+
                 </div>
             </div>
             <div class="header-status">
@@ -379,6 +379,8 @@
                                     <th><i class="fas fa-flag"></i> DESTINO</th>
                                     <th><i class="fas fa-ticket-alt"></i> BILHETAGEM</th>
                                     <th><i class="fas fa-subway"></i> MODAL</th>
+                                    <th><i class="fas fa-hashtag"></i> Nº LINHA</th>
+                                    <th><i class="fas fa-route"></i> TIPO DE LINHA</th>
                                     <th><i class="fas fa-exchange-alt"></i> INTEGRAÇÃO</th>
                                     <th><i class="fas fa-money-bill"></i> VALOR</th>
                                     <th><i class="fas fa-cog"></i> AÇÕES</th>
@@ -387,7 +389,7 @@
                             <tbody id="reportTableBody">
                                 <!-- Passagens serão adicionadas aqui -->
                                 <tr class="empty-row">
-                                    <td colspan="8">
+                                    <td colspan="10">
                                         <div class="empty-state">
                                             <i class="fas fa-clipboard-list"></i>
                                             <p>Nenhuma passagem registrada ainda</p>
@@ -454,9 +456,9 @@
             <div class="footer-content">
                 <div class="footer-logo">
                     <div class="logo-placeholder small">
-                        <i class="fas fa-bus"></i>
+                        <img src="LOGO_OFICIAL_OBJETIVA.png.png" alt="Logo Objetiva MKT" class="logo-img">
                     </div>
-                    <p>Objetiva MKT</p>
+
                 </div>
                 <div class="footer-info">
                     <p>
@@ -464,7 +466,7 @@
                         Sistema seguro de registro de deslocamentos
                     </p>
                     <p class="footer-copyright">
-                        © 2024 Sistema de Relatórios. Todos os direitos reservados.
+                        © 2025Sistema de Relatórios. Todos os direitos reservados.
                     </p>
                 </div>
             </div>
@@ -550,6 +552,8 @@
     </div>
 
     <!-- Scripts -->
+    <!-- Imagem oculta usada para exportação em PDF -->
+    <img id="logoPdfSource" src="LOGO_OFICIAL_OBJETIVA.png.png" alt="Logo Objetiva MKT" style="display:none;">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="app.js"></script>
