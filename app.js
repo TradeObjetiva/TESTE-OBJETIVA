@@ -26,6 +26,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const totalSemanal = document.getElementById('totalSemanal');
     const mediaDiaria = document.getElementById('mediaDiaria');
     const diasRegistro = document.getElementById('diasRegistro');
+    const reportSummaryRow = document.getElementById('reportSummaryRow');
+    const mediaPorPassagemCell = document.getElementById('mediaPorPassagemCell');
     const valorIntegracao = document.getElementById('valorIntegracao');
     const toast = document.getElementById('toast');
 
@@ -946,6 +948,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Atualizar dias com registro
         diasRegistro.textContent = diasUnicos;
+
+        // Atualizar linha de média na tabela (média por passagem)
+        if (reportSummaryRow && mediaPorPassagemCell) {
+            if (reports.length > 0) {
+                const mediaPorPassagem = total / reports.length;
+                mediaPorPassagemCell.textContent = `R$ ${mediaPorPassagem.toFixed(2)}`;
+                reportSummaryRow.classList.remove('hidden');
+            } else {
+                mediaPorPassagemCell.textContent = 'R$ 0,00';
+                reportSummaryRow.classList.add('hidden');
+            }
+        }
     }
 
     // Função global para remover relatórios
@@ -1157,6 +1171,35 @@ document.addEventListener("DOMContentLoaded", function () {
             doc.setFontSize(16);
             doc.text("PASSAGENS REGISTRADAS", 105, 20, { align: 'center' });
 
+            // Montar corpo da tabela com as passagens + linha de média por passagem
+            const totalGeralPassagens = reports.reduce((sum, r) => sum + r.valor, 0);
+            const mediaPorPassagem = reports.length > 0 ? totalGeralPassagens / reports.length : 0;
+
+            const tabelaPassagens = reports.map(report => [
+                report.dataVisita,
+                report.ida,
+                report.destino,
+                report.bilhetagem,
+                report.modal,
+                report.numeroLinha || '-',
+                report.tipoLinha || '-',
+                'R$ ' + report.valor.toFixed(2),
+                report.integracao || 'NÃO'
+            ]);
+
+            // Linha final de resumo: média por passagem
+            tabelaPassagens.push([
+                'MÉDIA POR PASSAGEM',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                'R$ ' + mediaPorPassagem.toFixed(2),
+                ''
+            ]);
+
             doc.autoTable({
                 startY: 30,
                 head: [[
@@ -1170,17 +1213,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     'VALOR',
                     'INTEGRAÇÃO'
                 ]],
-                body: reports.map(report => [
-                    report.dataVisita,
-                    report.ida,
-                    report.destino,
-                    report.bilhetagem,
-                    report.modal,
-                    report.numeroLinha || '-',
-                    report.tipoLinha || '-',
-                    'R$ ' + report.valor.toFixed(2),
-                    report.integracao || 'NÃO'
-                ]),
+                body: tabelaPassagens,
                 margin: { horizontal: 15 },
                 styles: { fontSize: 8, cellPadding: 3 },
                 headerStyles: { fillColor: [44, 62, 80], textColor: 255 }
