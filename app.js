@@ -86,10 +86,28 @@ document.addEventListener("DOMContentLoaded", function () {
             modais: [
                 { value: 'ônibus', label: 'Ônibus' },
                 { value: 'van', label: 'Van' },
+                { value: 'brt', label: 'BRT' },
                 { value: 'vlt', label: 'VLT' }
             ],
             tipoLinha: [
                 { value: 'municipal', label: 'Municipal' }
+            ]
+        },
+        'caju cartão mobilidade': {
+            // Mesmos modais/tipos de "outros"
+            modais: [
+                { value: 'ônibus', label: 'Ônibus' },
+                { value: 'metrô', label: 'Metrô' },
+                { value: 'trem', label: 'Trem' },
+                { value: 'van', label: 'Van' },
+                { value: 'barcas', label: 'Barcas' },
+                { value: 'brt', label: 'BRT' },
+                { value: 'vlt', label: 'VLT' },
+                { value: 'a pé', label: 'A Pé' }
+            ],
+            tipoLinha: [
+                { value: 'municipal', label: 'Municipal' },
+                { value: 'intermunicipal', label: 'Intermunicipal' }
             ]
         },
         'outros': {
@@ -512,13 +530,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const bilhetagem = this.value;
         console.log('Bilhetagem selecionada:', bilhetagem);
 
-        // Mostrar/ocultar campo "Outros"
-        if (bilhetagem === 'outros') {
-            otherField.classList.remove('hidden');
-        } else {
-            otherField.classList.add('hidden');
-            document.getElementById('other').value = '';
-        }
+        // Campo "Especifique o tipo" não é mais utilizado
+        otherField.classList.add('hidden');
 
         // Atualizar opções de modal
         updateModalOptions(bilhetagem);
@@ -739,16 +752,8 @@ document.addEventListener("DOMContentLoaded", function () {
         event.preventDefault();
         console.log('Submetendo formulário de passagem...');
 
-        // Capturar o valor da bilhetagem
-        let bilhetagem = document.getElementById('bilhetagem').value;
-        if (bilhetagem === 'outros') {
-            const otherValue = document.getElementById('other').value.trim();
-            if (!otherValue) {
-                showToast('Por favor, especifique o tipo de bilhetagem quando selecionar "Outros".', 'error');
-                return;
-            }
-            bilhetagem = otherValue;
-        }
+        // Capturar o valor da bilhetagem (sem "especifique o tipo")
+        const bilhetagem = document.getElementById('bilhetagem').value;
 
         // Parse do valor
         let valorInput = document.getElementById('valor').value.trim();
