@@ -291,16 +291,13 @@
                                 <option value="">Selecione...</option>
                                 <option value="rio card">Rio Card</option>
                                 <option value="jaé">Jaé</option>
+                                <option value="caju cartão mobilidade">Caju Cartão Mobilidade</option>
                                 <option value="outros">Outros</option>
                             </select>
                         </div>
 
-                        <div id="otherField" class="form-group hidden">
-                            <label for="other">
-                                <i class="fas fa-edit"></i> Especifique o tipo *
-                            </label>
-                            <input type="text" id="other" placeholder="Digite o tipo de bilhetagem">
-                        </div>
+                        <!-- Campo "Especifique o tipo" desativado (não é mais utilizado) -->
+                        <div id="otherField" class="form-group hidden"></div>
                     </div>
 
                     <div class="form-row">
@@ -339,7 +336,7 @@
                                 <span class="valor-prefix">R$</span>
                                 <input type="text" id="valor" required placeholder="0,00" oninput="formatValor(this)">
                             </div>
-                            <small class="valor-hint">Use vírgula para centavos (ex: 4,70)</small>
+                            <small class="valor-hint">Use vírgula para centavos (ex: 5,50)</small>
                         </div>
                     </div>
 
@@ -397,6 +394,15 @@
                                     </td>
                                 </tr>
                             </tbody>
+                            <tfoot>
+                                <tr id="reportSummaryRow" class="summary-row hidden">
+                                    <td colspan="8" class="summary-label">
+                                        <i class="fas fa-calculator"></i> MÉDIA POR PASSAGEM
+                                    </td>
+                                    <td id="mediaPorPassagemCell">R$ 0,00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
 
@@ -559,5 +565,3 @@
 </body>
 
 </html>
-
-
