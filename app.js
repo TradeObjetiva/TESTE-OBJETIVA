@@ -1,559 +1,1207 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+document.addEventListener("DOMContentLoaded", function () {
+    // ===== ELEMENTOS DO DOM =====
+    const colaboradorForm = document.getElementById('colaboradorForm');
+    const etapa1 = document.getElementById('etapa1');
+    const etapa2 = document.getElementById('etapa2');
+    const reportForm = document.getElementById('reportForm');
+    const reportTableBody = document.getElementById('reportTableBody');
+    const totalsList = document.getElementById('totalsList');
+    const exportPdfButton = document.getElementById('exportPdfButton');
+    const clearAllButton = document.getElementById('clearAllButton');
+    const numeroLinhaContainer = document.getElementById('numeroLinhaContainer');
+    const tipoLinhaContainer = document.getElementById('tipoLinhaContainer');
+    const valorContainer = document.getElementById('valorContainer');
+    const modalSelect = document.getElementById('modal');
+    const bilhetagemSelect = document.getElementById('bilhetagem');
+    const tipoLinhaSelect = document.getElementById('tipoLinha');
+    const otherField = document.getElementById('otherField');
+    const integracaoModal = document.getElementById('integracaoModal');
+    const tipoRelatorioSelect = document.getElementById('tipoRelatorio');
+    const periodoReembolsoContainer = document.getElementById('periodoReembolsoContainer');
+    const btnAutorizar = document.getElementById('btnAutorizar');
+    const backButton = document.getElementById('backButton');
+    const currentStep = document.getElementById('currentStep');
+    const colaboradorNome = document.getElementById('colaboradorNome');
+    const totalPassagens = document.getElementById('totalPassagens');
+    const totalSemanal = document.getElementById('totalSemanal');
+    const mediaDiaria = document.getElementById('mediaDiaria');
+    const diasRegistro = document.getElementById('diasRegistro');
+    const valorIntegracao = document.getElementById('valorIntegracao');
+    const toast = document.getElementById('toast');
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório de Passagem - Agência Objetiva Marketing</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
+    // Elementos da assinatura
+    const canvasColaborador = document.getElementById('canvasColaborador');
+    const limparAssinaturaBtn = document.getElementById('limparAssinaturaColaborador');
+    const assinaturaTrigger = document.getElementById('assinaturaTrigger');
+    const fullscreenSignature = document.getElementById('fullscreenSignature');
+    const fullscreenCanvas = document.getElementById('fullscreenCanvas');
+    const closeFullscreenBtn = document.getElementById('closeFullscreen');
+    const clearFullscreenBtn = document.getElementById('clearFullscreen');
+    const confirmSignatureBtn = document.getElementById('confirmSignature');
+    const orientationAlert = document.getElementById('orientationAlert');
+    const canvasOverlay = document.getElementById('canvasOverlay');
+    const assinaturaContainer = document.getElementById('assinaturaContainer');
+    const termoNome = document.getElementById('termoNome');
+    const termoEndereco = document.getElementById('termoEndereco');
 
-<body>
-    <!-- Container Principal -->
-    <div class="container">
-        <!-- Header -->
-        <header>
-            <div class="header-logo">
-                <div class="logo-placeholder">
-                    <i class="fas fa-bus"></i>
-                </div>
-                <div class="header-title">
-                    <h1>Relatório de Passagem</h1>
-                    <p class="subtitle">Sistema de registro de deslocamentos</p>
-                </div>
-            </div>
-            <div class="header-status">
-                <div class="status-badge" id="currentStep">Etapa 1 de 2</div>
-            </div>
-        </header>
+    // ===== VARIÁVEIS DE ESTADO =====
+    let reports = [];
+    let dailyTotals = {};
+    let colaboradorData = {};
+    let assinaturaColaborador = null;
+    let isDrawing = false;
+    let isDrawingFullscreen = false;
+    let ctxColaborador;
+    let ctxFullscreen;
 
-        <!-- Conteúdo Principal -->
-        <main class="main-content">
-            <!-- Etapa 1: Dados do Colaborador -->
-            <section id="etapa1" class="form-section active">
-                <form id="colaboradorForm">
-                    <div class="section-title">
-                        <i class="fas fa-user-circle"></i>
-                        <h2>Dados do Colaborador</h2>
+    // ===== FUNÇÃO AUXILIAR PARA CANVAS =====
+    function setupCanvasContext(ctx, canvas) {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = '#FFFFFF';
+
+        // Preencher fundo branco
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ===== CONFIGURAÇÕES DE MODAIS =====
+    const modalConfig = {
+        'rio card': {
+            modais: [
+                { value: 'ônibus', label: 'Ônibus' },
+                { value: 'metrô', label: 'Metrô' },
+                { value: 'barcas', label: 'Barcas' },
+                { value: 'trem', label: 'Trem' }
+            ],
+            tipoLinha: [
+                { value: 'intermunicipal', label: 'Intermunicipal' }
+            ]
+        },
+        'jaé': {
+            modais: [
+                { value: 'ônibus', label: 'Ônibus' },
+                { value: 'van', label: 'Van' },
+                { value: 'vlt', label: 'VLT' }
+            ],
+            tipoLinha: [
+                { value: 'municipal', label: 'Municipal' }
+            ]
+        },
+        'outros': {
+            modais: [
+                { value: 'ônibus', label: 'Ônibus' },
+                { value: 'metrô', label: 'Metrô' },
+                { value: 'trem', label: 'Trem' },
+                { value: 'van', label: 'Van' },
+                { value: 'barcas', label: 'Barcas' },
+                { value: 'brt', label: 'BRT' },
+                { value: 'vlt', label: 'VLT' },
+                { value: 'a pé', label: 'A Pé' }
+            ],
+            tipoLinha: [
+                { value: 'municipal', label: 'Municipal' },
+                { value: 'intermunicipal', label: 'Intermunicipal' }
+            ]
+        }
+    };
+
+    // ===== INICIALIZAÇÃO =====
+    function init() {
+        console.log('Inicializando sistema...');
+
+        // Garantir visibilidade correta das etapas ao iniciar
+        etapa1.style.display = 'block';
+        etapa2.style.display = 'none';
+        currentStep.textContent = 'Etapa 1 de 2';
+
+        // Configurar data de envio como hoje
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('dataEnvio').value = hoje;
+
+        // Configurar data de início e fim (uma semana atrás até hoje)
+        const umaSemanaAtras = new Date();
+        umaSemanaAtras.setDate(umaSemanaAtras.getDate() - 7);
+        document.getElementById('dataInicio').value = umaSemanaAtras.toISOString().split('T')[0];
+        document.getElementById('dataFim').value = hoje;
+
+        // Inicializar assinatura
+        initSignaturePad();
+
+        // Configurar eventos
+        setupEventListeners();
+
+        // Atualizar opções iniciais
+        updateModalOptions('rio card');
+
+        console.log('Sistema inicializado com sucesso!');
+    }
+
+    // ===== CONFIGURAÇÃO DE EVENTOS =====
+    function setupEventListeners() {
+        console.log('Configurando event listeners...');
+
+        // Formulários
+        colaboradorForm.addEventListener('submit', handleColaboradorSubmit);
+        reportForm.addEventListener('submit', handleReportSubmit);
+
+        // Elementos do formulário
+        tipoRelatorioSelect.addEventListener('change', handleTipoRelatorioChange);
+        bilhetagemSelect.addEventListener('change', handleBilhetagemChange);
+        modalSelect.addEventListener('change', handleModalChange);
+
+        // Telefone
+        document.getElementById('telefone').addEventListener('input', formatTelefone);
+
+        // Nome do colaborador (atualizar termo em tempo real)
+        document.getElementById('nomeCompleto').addEventListener('input', updateTermo);
+        document.getElementById('endereco').addEventListener('input', updateTermo);
+        document.getElementById('bairro').addEventListener('input', updateTermo);
+        document.getElementById('cidade').addEventListener('input', updateTermo);
+
+        // Botões
+        exportPdfButton.addEventListener('click', exportToPDF);
+        clearAllButton.addEventListener('click', clearAllReports);
+        backButton.addEventListener('click', voltarParaEtapa1);
+
+        // Modal de integração
+        document.getElementById('btnSimIntegracao').addEventListener('click', handleIntegracaoSim);
+        document.getElementById('btnNaoIntegracao').addEventListener('click', handleIntegracaoNao);
+
+        console.log('Event listeners configurados!');
+    }
+
+    // ===== ASSINATURA DIGITAL (COMPUTADOR E MOBILE) =====
+    function initSignaturePad() {
+        console.log('Inicializando assinatura digital...');
+
+        if (!canvasColaborador) {
+            console.error('Canvas de assinatura não encontrado!');
+            return;
+        }
+
+        // Configurar canvas pequeno
+        ctxColaborador = canvasColaborador.getContext('2d');
+        setupCanvasContext(ctxColaborador, canvasColaborador);
+
+        // Configurar canvas de tela cheia
+        ctxFullscreen = fullscreenCanvas.getContext('2d');
+
+        // Event listeners para assinatura
+        assinaturaTrigger.addEventListener('click', openFullscreenSignature);
+        closeFullscreenBtn.addEventListener('click', closeFullscreenSignature);
+        clearFullscreenBtn.addEventListener('click', clearFullscreenCanvas);
+        confirmSignatureBtn.addEventListener('click', confirmFullscreenSignature);
+        limparAssinaturaBtn.addEventListener('click', clearSmallCanvas);
+
+        // Configurar eventos de desenho no canvas pequeno (para assinatura direta no computador)
+        setupCanvasDrawing(canvasColaborador, 'small');
+
+        // Configurar eventos para o canvas de tela cheia
+        setupCanvasDrawing(fullscreenCanvas, 'fullscreen');
+
+        // Atualizar botão de assinatura com texto dinâmico
+        updateSignatureButtonText();
+
+        console.log('Assinatura digital inicializada!');
+    }
+
+    function setupCanvasDrawing(canvas, type) {
+        const isFullscreen = type === 'fullscreen';
+        const ctx = isFullscreen ? ctxFullscreen : ctxColaborador;
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Função para obter coordenadas corretas
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+
+            if (e.type.includes('touch')) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            return [
+                clientX - rect.left,
+                clientY - rect.top
+            ];
+        }
+
+        // Função para calcular escala
+        function getScale(canvas) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: canvas.width / rect.width,
+                y: canvas.height / rect.height
+            };
+        }
+
+        // Evento: Iniciar desenho
+        function startDrawing(e) {
+            e.preventDefault();
+            isDrawing = true;
+
+            if (isFullscreen) {
+                canvasOverlay.classList.add('hidden');
+            } else {
+                // Esconder instrução de toque no canvas pequeno
+                document.querySelectorAll('.canvas-instruction').forEach(el => {
+                    el.classList.add('hidden');
+                });
+            }
+
+            const [x, y] = getCoordinates(e);
+            const scale = getScale(canvas);
+
+            lastX = x * scale.x;
+            lastY = y * scale.y;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+        }
+
+        // Evento: Desenhar
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const [x, y] = getCoordinates(e);
+            const scale = getScale(canvas);
+
+            const currentX = x * scale.x;
+            const currentY = y * scale.y;
+
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+
+            lastX = currentX;
+            lastY = currentY;
+        }
+
+        // Evento: Parar desenho
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+
+            if (!isFullscreen) {
+                // Salvar assinatura do canvas pequeno
+                if (canvasColaborador.toDataURL() !== 'data:,') {
+                    assinaturaColaborador = canvasColaborador.toDataURL();
+                    validateSignature();
+                }
+            }
+        }
+
+        // Configurar eventos de mouse (computador)
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Configurar eventos de toque (mobile)
+        canvas.addEventListener('touchstart', function (e) {
+            startDrawing(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', function (e) {
+            draw(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', stopDrawing);
+
+        // Prevenir comportamento padrão de arrastar na imagem
+        canvas.addEventListener('dragstart', function (e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Configurar contexto do canvas usando helper global
+        function resizeCanvas() {
+            setupCanvasContext(ctx, canvas);
+        }
+
+        resizeCanvas();
+
+        // Redimensionar canvas quando a janela mudar de tamanho
+        const resizeObserver = new ResizeObserver(() => {
+            resizeCanvas();
+            // Redesenhar assinatura existente se houver
+            if (!isFullscreen && assinaturaColaborador) {
+                const img = new Image();
+                img.onload = function () {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = assinaturaColaborador;
+            }
+        });
+
+        resizeObserver.observe(canvas);
+    }
+
+    function updateSignatureButtonText() {
+        // Função mantida vazia para evitar erros caso seja chamada,
+        // pois os elementos de texto de gatilho não existem mais no HTML.
+    }
+
+    function clearSmallCanvas() {
+        ctxColaborador.clearRect(0, 0, canvasColaborador.width, canvasColaborador.height);
+        ctxColaborador.fillStyle = '#FFFFFF';
+        ctxColaborador.fillRect(0, 0, canvasColaborador.width, canvasColaborador.height);
+        assinaturaColaborador = null;
+        validateSignature();
+
+        // Se existirem instruções no DOM, reexibir
+        document.querySelectorAll('.canvas-instruction').forEach(el => {
+            el.classList.remove('hidden');
+        });
+    }
+
+    function openFullscreenSignature() {
+        console.log('Abrindo tela cheia de assinatura...');
+
+        // Configurar canvas de tela cheia
+        fullscreenCanvas.width = fullscreenCanvas.offsetWidth;
+        fullscreenCanvas.height = fullscreenCanvas.offsetHeight;
+
+        ctxFullscreen.lineWidth = 2;
+        ctxFullscreen.lineCap = 'round';
+        ctxFullscreen.lineJoin = 'round';
+        ctxFullscreen.strokeStyle = '#000000';
+        ctxFullscreen.fillStyle = '#FFFFFF';
+        ctxFullscreen.fillRect(0, 0, fullscreenCanvas.width, fullscreenCanvas.height);
+
+        // Copiar assinatura existente se houver
+        if (assinaturaColaborador) {
+            const img = new Image();
+            img.onload = function () {
+                ctxFullscreen.drawImage(img, 0, 0, fullscreenCanvas.width, fullscreenCanvas.height);
+            };
+            img.src = assinaturaColaborador;
+        }
+
+        fullscreenSignature.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        // Forçar orientação paisagem se suportado e for mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            lockOrientation();
+        }
+
+        // Mostrar overlay inicial
+        canvasOverlay.classList.remove('hidden');
+    }
+
+    // (confirmação da assinatura já foi implementada acima; removidas versões duplicadas)
+
+    function clearFullscreenCanvas() {
+        ctxFullscreen.clearRect(0, 0, fullscreenCanvas.width, fullscreenCanvas.height);
+        ctxFullscreen.fillStyle = '#FFFFFF';
+        ctxFullscreen.fillRect(0, 0, fullscreenCanvas.width, fullscreenCanvas.height);
+        canvasOverlay.classList.remove('hidden');
+    }
+
+    function closeFullscreenSignature() {
+        fullscreenSignature.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        unlockOrientation();
+    }
+
+    function confirmFullscreenSignature() {
+        // Copiar assinatura da tela cheia para o canvas pequeno
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+
+        tempCanvas.width = canvasColaborador.width;
+        tempCanvas.height = canvasColaborador.height;
+
+        // Redimensionar imagem
+        tempCtx.drawImage(fullscreenCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
+        // Desenhar no canvas pequeno
+        clearSmallCanvas();
+        ctxColaborador.drawImage(tempCanvas, 0, 0);
+
+        // Salvar assinatura
+        assinaturaColaborador = canvasColaborador.toDataURL();
+        validateSignature();
+
+        closeFullscreenSignature();
+        showToast('Assinatura confirmada com sucesso!');
+    }
+
+    function lockOrientation() {
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').then(() => {
+                console.log('Orientação travada para paisagem');
+                orientationAlert.classList.add('hidden');
+            }).catch(err => {
+                console.warn('Não foi possível travar orientação:', err);
+                orientationAlert.classList.remove('hidden');
+            });
+        } else {
+            orientationAlert.classList.remove('hidden');
+        }
+    }
+
+    function unlockOrientation() {
+        if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
+        }
+    }
+
+    function validateSignature() {
+        // Assinatura é opcional: manter botão sempre habilitado
+        btnAutorizar.disabled = false;
+        btnAutorizar.classList.remove('disabled');
+    }
+
+    // ===== ATUALIZAÇÃO DO TERMO =====
+    function updateTermo() {
+        const nome = document.getElementById('nomeCompleto').value.trim();
+        const endereco = document.getElementById('endereco').value.trim();
+        const bairro = document.getElementById('bairro').value.trim();
+        const cidade = document.getElementById('cidade').value.trim();
+
+        // Atualizar termo
+        if (nome) {
+            termoNome.textContent = nome.toUpperCase();
+        } else {
+            termoNome.textContent = '[NOME DO COLABORADOR]';
+        }
+
+        if (endereco && bairro && cidade) {
+            termoEndereco.textContent = `${endereco}, ${bairro}, ${cidade}`.toUpperCase();
+        } else {
+            termoEndereco.textContent = '[ENDEREÇO COMPLETO]';
+        }
+
+        // Mostrar/ocultar container de assinatura quando nome for preenchido
+        if (nome.trim() !== '') {
+            assinaturaContainer.classList.remove('hidden');
+        } else {
+            assinaturaContainer.classList.add('hidden');
+        }
+    }
+
+    // ===== MANIPULAÇÃO DE FORMULÁRIOS =====
+    function handleTipoRelatorioChange() {
+        const tipo = this.value;
+        console.log('Tipo de relatório selecionado:', tipo);
+
+        if (tipo === 'Reembolso') {
+            periodoReembolsoContainer.classList.remove('hidden');
+            document.getElementById('dataInicio').required = true;
+            document.getElementById('dataFim').required = true;
+        } else {
+            periodoReembolsoContainer.classList.add('hidden');
+            document.getElementById('dataInicio').required = false;
+            document.getElementById('dataFim').required = false;
+        }
+    }
+
+    function handleBilhetagemChange() {
+        const bilhetagem = this.value;
+        console.log('Bilhetagem selecionada:', bilhetagem);
+
+        // Mostrar/ocultar campo "Outros"
+        if (bilhetagem === 'outros') {
+            otherField.classList.remove('hidden');
+        } else {
+            otherField.classList.add('hidden');
+            document.getElementById('other').value = '';
+        }
+
+        // Atualizar opções de modal
+        updateModalOptions(bilhetagem);
+    }
+
+    function updateModalOptions(bilhetagem) {
+        const bilhetagemKey = bilhetagem.toLowerCase();
+        const config = modalConfig[bilhetagemKey] || modalConfig['outros'];
+
+        console.log('Atualizando modais para:', bilhetagemKey, config);
+
+        // Limpar opções atuais
+        modalSelect.innerHTML = '<option value="">Selecione...</option>';
+
+        // Adicionar novas opções
+        config.modais.forEach(modal => {
+            const option = document.createElement('option');
+            option.value = modal.value;
+            option.textContent = modal.label;
+            modalSelect.appendChild(option);
+        });
+
+        // Atualizar opções de tipo de linha
+        updateTipoLinhaOptions(bilhetagemKey);
+
+        // Atualizar campos visíveis
+        handleModalChange();
+    }
+
+    function updateTipoLinhaOptions(bilhetagem) {
+        const bilhetagemKey = bilhetagem.toLowerCase();
+        const config = modalConfig[bilhetagemKey] || modalConfig['outros'];
+
+        // Limpar opções atuais
+        tipoLinhaSelect.innerHTML = '<option value="">Selecione...</option>';
+
+        // Adicionar novas opções
+        config.tipoLinha.forEach(tipo => {
+            const option = document.createElement('option');
+            option.value = tipo.value;
+            option.textContent = tipo.label;
+            tipoLinhaSelect.appendChild(option);
+        });
+    }
+
+    function handleModalChange() {
+        const modal = modalSelect.value;
+        console.log('Modal selecionado:', modal);
+
+        if (modal === 'ônibus') {
+            numeroLinhaContainer.classList.remove('hidden');
+            tipoLinhaContainer.classList.remove('hidden');
+            valorContainer.classList.remove('hidden');
+        } else if (modal === 'a pé') {
+            numeroLinhaContainer.classList.add('hidden');
+            tipoLinhaContainer.classList.add('hidden');
+            valorContainer.classList.remove('hidden');
+            document.getElementById('valor').value = '0,00';
+        } else {
+            numeroLinhaContainer.classList.add('hidden');
+            tipoLinhaContainer.classList.add('hidden');
+            valorContainer.classList.remove('hidden');
+        }
+    }
+
+    // ===== FORMATADORES =====
+    function formatTelefone(e) {
+        let value = e.target.value.replace(/\D/g, '');
+
+        if (value.length > 11) {
+            value = value.substring(0, 11);
+        }
+
+        if (value.length <= 10) {
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+        } else {
+            value = value.replace(/^(\d{2})(\d{5})(\d{0,4})$/, '($1) $2-$3');
+        }
+
+        e.target.value = value;
+    }
+
+    // Função global para formatar valor
+    window.formatValor = function (input) {
+        let valor = input.value.replace(/[^\d]/g, '');
+
+        // Permite valores até R$ 999,99 (6 dígitos)
+        if (valor.length > 6) {
+            valor = valor.substring(0, 6);
+        }
+
+        if (valor.length === 0) {
+            input.value = '';
+            return;
+        }
+
+        // Converte para número e formata com 2 decimais
+        const valorNumerico = parseFloat(valor) / 100;
+        input.value = valorNumerico.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    };
+
+    // ===== VALIDAÇÕES =====
+    function validateTelefone(telefone) {
+        const telefoneLimpo = telefone.replace(/\D/g, '');
+
+        if (telefoneLimpo.length < 10 || telefoneLimpo.length > 11) {
+            return false;
+        }
+
+        const ddd = telefoneLimpo.substring(0, 2);
+        const dddsValidos = ['11', '12', '13', '14', '15', '16', '17', '18', '19',
+            '21', '22', '24', '27', '28', '31', '32', '33', '34',
+            '35', '37', '38', '41', '42', '43', '44', '45', '46',
+            '47', '48', '49', '51', '53', '54', '55', '61', '62',
+            '63', '64', '65', '66', '67', '68', '69', '71', '73',
+            '74', '75', '77', '79', '81', '82', '83', '84', '85',
+            '86', '87', '88', '89', '91', '92', '93', '94', '95',
+            '96', '97', '98', '99'];
+
+        return dddsValidos.includes(ddd);
+    }
+
+    function validatePeriodoReembolso() {
+        const tipoRelatorio = document.getElementById('tipoRelatorio').value;
+        const dataInicio = document.getElementById('dataInicio');
+        const dataFim = document.getElementById('dataFim');
+
+        if (tipoRelatorio === 'Reembolso') {
+            if (!dataInicio.value || !dataFim.value) {
+                showToast('Por favor, preencha o período do reembolso (data início e data fim).', 'error');
+                return false;
+            }
+
+            const inicio = new Date(dataInicio.value);
+            const fim = new Date(dataFim.value);
+
+            if (inicio > fim) {
+                showToast('A data de início deve ser anterior à data de fim.', 'error');
+                return false;
+            }
+
+            const diffTime = Math.abs(fim - inicio);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 31) {
+                if (!confirm(`O período selecionado é de ${diffDays} dias. Deseja continuar?`)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // ===== MANIPULADORES DE SUBMIT =====
+    function handleColaboradorSubmit(event) {
+        event.preventDefault();
+        console.log('Submetendo formulário do colaborador...');
+
+        // Validar checkbox de autorização
+        if (!document.getElementById('autorizacao').checked) {
+            showToast('Você precisa marcar a caixa de autorização antes de salvar os dados.', 'error');
+            return;
+        }
+
+        // Validar telefone
+        const telefone = document.getElementById('telefone').value;
+        if (!validateTelefone(telefone)) {
+            showToast('Por favor, insira um telefone válido com DDD (ex: (11) 99999-9999).', 'error');
+            return;
+        }
+
+        // Validar período de reembolso se necessário
+        if (!validatePeriodoReembolso()) {
+            return;
+        }
+
+        // Capturar dados do período de reembolso
+        let periodoReembolso = null;
+        if (document.getElementById('tipoRelatorio').value === 'Reembolso') {
+            periodoReembolso = {
+                dataInicio: document.getElementById('dataInicio').value,
+                dataFim: document.getElementById('dataFim').value
+            };
+        }
+
+        // Salvar dados do colaborador
+        colaboradorData = {
+            nomeCompleto: document.getElementById('nomeCompleto').value.trim().toUpperCase(),
+            endereco: document.getElementById('endereco').value.trim().toUpperCase(),
+            bairro: document.getElementById('bairro').value.trim().toUpperCase(),
+            cidade: document.getElementById('cidade').value.trim().toUpperCase(),
+            telefone: telefone,
+            dataEnvio: document.getElementById('dataEnvio').value,
+            tipoRelatorio: document.getElementById('tipoRelatorio').value.toUpperCase(),
+            periodoReembolso: periodoReembolso,
+            equipe: document.getElementById('equipe').value.toUpperCase(),
+            autorizacao: document.getElementById('autorizacao').checked,
+            assinaturaColaborador: assinaturaColaborador
+        };
+
+        // Atualizar nome na etapa 2
+        colaboradorNome.textContent = colaboradorData.nomeCompleto;
+
+        // Ir para etapa 2
+        etapa1.style.display = 'none';
+        etapa2.style.display = 'block';
+        currentStep.textContent = 'Etapa 2 de 2';
+
+        showToast('Dados salvos com sucesso! Agora adicione suas passagens.');
+        console.log('Colaborador data saved:', colaboradorData);
+    }
+
+    function handleReportSubmit(event) {
+        event.preventDefault();
+        console.log('Submetendo formulário de passagem...');
+
+        // Capturar o valor da bilhetagem
+        let bilhetagem = document.getElementById('bilhetagem').value;
+        if (bilhetagem === 'outros') {
+            const otherValue = document.getElementById('other').value.trim();
+            if (!otherValue) {
+                showToast('Por favor, especifique o tipo de bilhetagem quando selecionar "Outros".', 'error');
+                return;
+            }
+            bilhetagem = otherValue;
+        }
+
+        // Parse do valor
+        let valorInput = document.getElementById('valor').value.trim();
+        valorInput = valorInput.replace(/[^\d.,]/g, '');
+        valorInput = valorInput.replace(',', '.');
+
+        const partes = valorInput.split('.');
+        if (partes.length > 2) {
+            valorInput = partes.slice(0, -1).join('') + '.' + partes[partes.length - 1];
+        }
+
+        const valor = parseFloat(valorInput) || 0;
+
+        // Validação de valor negativo
+        if (valor < 0) {
+            showToast('O valor não pode ser negativo.', 'error');
+            return;
+        }
+
+        const modal = modalSelect.value;
+
+        // Validação: se modal não é "a pé", valor deve ser maior que 0
+        if (modal !== 'a pé' && valor <= 0) {
+            showToast('Por favor, insira um valor válido para o transporte.', 'error');
+            return;
+        }
+
+        // Preparar dados do relatório
+        const reportData = {
+            dataVisita: document.getElementById('dataVisita').value,
+            ida: document.getElementById('ida').value.trim(),
+            destino: document.getElementById('destino').value.trim(),
+            bilhetagem: bilhetagem,
+            modal: modal,
+            valor: valor,
+            numeroLinha: document.getElementById('numeroLinha').value.trim(),
+            tipoLinha: document.getElementById('tipoLinha').value,
+            timestamp: new Date().toISOString()
+        };
+
+        // Converter para maiúsculas para exibição
+        reportData.dataVisita = reportData.dataVisita.toUpperCase();
+        reportData.ida = reportData.ida.toUpperCase();
+        reportData.destino = reportData.destino.toUpperCase();
+        reportData.bilhetagem = reportData.bilhetagem.toUpperCase();
+        reportData.modal = reportData.modal.toUpperCase();
+        reportData.numeroLinha = reportData.numeroLinha.toUpperCase();
+        reportData.tipoLinha = reportData.tipoLinha.toUpperCase();
+
+        if (reportData.modal === 'A PÉ') {
+            reportData.valor = 0;
+            reportData.tipoLinha = '';
+        }
+
+        // Verificar se é duplicado
+        if (isDuplicateReport(reportData)) {
+            showToast('Este relatório parece ser duplicado. Verifique os dados.', 'warning');
+            return;
+        }
+
+        // Decidir se mostra o modal de integração
+        const valorPassagemTipica = 5.00;
+
+        if (reportData.valor > 0 && reportData.valor < valorPassagemTipica) {
+            valorIntegracao.textContent = `R$ ${valor.toFixed(2)}`;
+            // Remover classe "hidden" para exibir o modal corretamente
+            integracaoModal.classList.remove('hidden');
+            integracaoModal.currentReport = reportData;
+        } else {
+            // Valores normais, não é integração
+            reportData.integracao = 'NÃO';
+            addReportDirectly(reportData);
+        }
+
+        // Resetar formulário
+        reportForm.reset();
+        document.getElementById('dataVisita').value = '';
+        updateModalOptions('rio card');
+        handleModalChange();
+
+        console.log('Passagem registrada:', reportData);
+    }
+
+    function handleIntegracaoSim() {
+        const reportData = integracaoModal.currentReport;
+        reportData.integracao = 'SIM';
+        addReportDirectly(reportData);
+        integracaoModal.classList.add('hidden');
+        integracaoModal.currentReport = null;
+    }
+
+    function handleIntegracaoNao() {
+        const reportData = integracaoModal.currentReport;
+        reportData.integracao = 'NÃO';
+        addReportDirectly(reportData);
+        integracaoModal.classList.add('hidden');
+        integracaoModal.currentReport = null;
+    }
+
+    // ===== FUNÇÕES AUXILIARES DE RELATÓRIOS =====
+    function isDuplicateReport(newReport) {
+        return reports.some(report =>
+            report.dataVisita === newReport.dataVisita &&
+            report.ida === newReport.ida &&
+            report.destino === newReport.destino &&
+            report.valor === newReport.valor &&
+            Math.abs(new Date(report.timestamp) - new Date(newReport.timestamp)) < 60000
+        );
+    }
+
+    function addReportDirectly(reportData) {
+        reports.push(reportData);
+        addReportToTable(reportData);
+        updateTotals();
+        updateResumo();
+        showToast('Passagem adicionada com sucesso!');
+    }
+
+    function addReportToTable(report) {
+        // Remover linha vazia se existir
+        const emptyRow = document.querySelector('.empty-row');
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        const row = document.createElement('tr');
+
+        const cells = [
+            report.dataVisita,
+            report.ida,
+            report.destino,
+            report.bilhetagem,
+            report.modal,
+            report.integracao || 'NÃO',
+            `R$ ${report.valor.toFixed(2)}`
+        ];
+
+        cells.forEach(text => {
+            const cell = document.createElement('td');
+            cell.textContent = text;
+            row.appendChild(cell);
+        });
+
+        const acoes = document.createElement('td');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-danger btn-small';
+        button.innerHTML = '<i class="fas fa-trash"></i>';
+        button.title = 'Remover passagem';
+        button.onclick = function () { removeReport(this); };
+        acoes.appendChild(button);
+        row.appendChild(acoes);
+
+        reportTableBody.appendChild(row);
+    }
+
+    function updateTotals() {
+        dailyTotals = {};
+        reports.forEach(report => {
+            const day = report.dataVisita;
+            dailyTotals[day] = (dailyTotals[day] || 0) + report.valor;
+        });
+
+        totalsList.innerHTML = '';
+
+        for (const [day, total] of Object.entries(dailyTotals)) {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span>${day}:</span>
+                <strong>R$ ${total.toFixed(2)}</strong>
+            `;
+            totalsList.appendChild(li);
+        }
+    }
+
+    function updateResumo() {
+        // Atualizar contador de passagens
+        totalPassagens.textContent = reports.length;
+
+        // Calcular total semanal
+        const total = reports.reduce((sum, report) => sum + report.valor, 0);
+        totalSemanal.textContent = `R$ ${total.toFixed(2)}`;
+
+        // Calcular média diária
+        const diasUnicos = new Set(reports.map(r => r.dataVisita)).size;
+        const media = diasUnicos > 0 ? total / diasUnicos : 0;
+        mediaDiaria.textContent = `R$ ${media.toFixed(2)}`;
+
+        // Atualizar dias com registro
+        diasRegistro.textContent = diasUnicos;
+    }
+
+    // Função global para remover relatórios
+    window.removeReport = function (button) {
+        if (!confirm('Tem certeza que deseja remover esta passagem?')) {
+            return;
+        }
+
+        const row = button.closest('tr');
+        const index = Array.from(reportTableBody.children).indexOf(row);
+
+        reports.splice(index, 1);
+        row.remove();
+
+        // Se não houver mais passagens, mostrar linha vazia
+        if (reports.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'empty-row';
+            emptyRow.innerHTML = `
+                <td colspan="8">
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <p>Nenhuma passagem registrada ainda</p>
+                        <small>Adicione sua primeira passagem usando o formulário acima</small>
                     </div>
+                </td>
+            `;
+            reportTableBody.appendChild(emptyRow);
+        }
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="nomeCompleto">
-                                <i class="fas fa-user"></i> Nome Completo *
-                            </label>
-                            <input type="text" id="nomeCompleto" required placeholder="Digite seu nome completo">
+        updateTotals();
+        updateResumo();
+        showToast('Passagem removida com sucesso!');
+    };
+
+    function clearAllReports() {
+        if (reports.length === 0) {
+            showToast('Não há passagens para limpar.', 'info');
+            return;
+        }
+
+        if (confirm('Tem certeza que deseja remover TODAS as passagens?')) {
+            reports = [];
+            reportTableBody.innerHTML = `
+                <tr class="empty-row">
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>Nenhuma passagem registrada ainda</p>
+                            <small>Adicione sua primeira passagem usando o formulário acima</small>
                         </div>
+                    </td>
+                </tr>
+            `;
 
-                        <div class="form-group">
-                            <label for="endereco">
-                                <i class="fas fa-home"></i> Endereço *
-                            </label>
-                            <input type="text" id="endereco" required placeholder="Rua, número">
-                        </div>
+            updateTotals();
+            updateResumo();
+            showToast('Todas as passagens foram removidas!');
+        }
+    }
 
-                        <div class="form-group">
-                            <label for="bairro">
-                                <i class="fas fa-map-marker-alt"></i> Bairro *
-                            </label>
-                            <input type="text" id="bairro" required placeholder="Nome do bairro">
-                        </div>
+    // ===== NAVEGAÇÃO ENTRE ETAPAS =====
+    function voltarParaEtapa1() {
+        etapa2.style.display = 'none';
+        etapa1.style.display = 'block';
+        currentStep.textContent = 'Etapa 1 de 2';
+    }
 
-                        <div class="form-group">
-                            <label for="cidade">
-                                <i class="fas fa-city"></i> Cidade *
-                            </label>
-                            <input type="text" id="cidade" required placeholder="Nome da cidade">
-                        </div>
+    // ===== TOAST NOTIFICATIONS =====
+    function showToast(message, type = 'success') {
+        const toastIcon = toast.querySelector('.toast-content i');
+        const toastMessage = toast.querySelector('.toast-message');
 
-                        <div class="form-group">
-                            <label for="telefone">
-                                <i class="fas fa-phone"></i> Telefone *
-                            </label>
-                            <input type="tel" id="telefone" required placeholder="(11) 99999-9999">
-                        </div>
+        // Configurar cor baseada no tipo
+        if (type === 'success') {
+            toast.style.background = 'linear-gradient(135deg, #27ae60, #219653)';
+            toastIcon.className = 'fas fa-check-circle';
+        } else if (type === 'error') {
+            toast.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
+            toastIcon.className = 'fas fa-exclamation-circle';
+        } else if (type === 'warning') {
+            toast.style.background = 'linear-gradient(135deg, #f39c12, #d68910)';
+            toastIcon.className = 'fas fa-exclamation-triangle';
+        } else if (type === 'info') {
+            toast.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
+            toastIcon.className = 'fas fa-info-circle';
+        }
 
-                        <div class="form-group">
-                            <label for="dataEnvio">
-                                <i class="fas fa-calendar-alt"></i> Data de Envio *
-                            </label>
-                            <input type="date" id="dataEnvio" required>
-                        </div>
+        toastMessage.textContent = message;
+        toast.classList.remove('hidden');
+        toast.classList.add('show');
 
-                        <div class="form-group">
-                            <label for="tipoRelatorio">
-                                <i class="fas fa-file-alt"></i> Tipo de Relatório *
-                            </label>
-                            <select id="tipoRelatorio" required>
-                                <option value="">Selecione...</option>
-                                <option value="Rota">Rota</option>
-                                <option value="Reembolso">Reembolso</option>
-                            </select>
-                        </div>
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 300);
+        }, 3000);
+    }
 
-                        <!-- Período do Reembolso (aparece apenas quando tipo é Reembolso) -->
-                        <div id="periodoReembolsoContainer" class="periodo-container hidden">
-                            <div class="form-group">
-                                <label for="dataInicio">
-                                    <i class="fas fa-calendar-plus"></i> Data Início *
-                                </label>
-                                <input type="date" id="dataInicio">
-                            </div>
+    // ===== EXPORTAÇÃO PDF =====
+    function exportToPDF() {
+        if (reports.length === 0) {
+            showToast('Não há passagens para exportar.', 'warning');
+            return;
+        }
 
-                            <div class="form-group">
-                                <label for="dataFim">
-                                    <i class="fas fa-calendar-minus"></i> Data Fim *
-                                </label>
-                                <input type="date" id="dataFim">
-                            </div>
-                        </div>
+        if (!colaboradorData.nomeCompleto) {
+            showToast('Complete os dados do colaborador primeiro.', 'error');
+            return;
+        }
 
-                        <div class="form-group">
-                            <label for="equipe">
-                                <i class="fas fa-users"></i> Equipe *
-                            </label>
-                            <select id="equipe" required>
-                                <option value="">Selecione...</option>
-                                <option value="EXCLUSIVO">EXCLUSIVO</option>
-                                <option value="COMPARTILHADO">COMPARTILHADO</option>
-                                <option value="TERCEIRIZADO">TERCEIRIZADO</option>
-                            </select>
-                        </div>
-                    </div>
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
 
-                    <!-- Termo de Autorização -->
-                    <div class="termo-container">
-                        <div class="termo-header">
-                            <i class="fas fa-file-signature"></i>
-                            <h3>Termo de Autorização</h3>
-                        </div>
+            // Página 1: Dados do colaborador
+            doc.setFontSize(16);
+            doc.text("RELATÓRIO DE PASSAGEM", 105, 20, { align: 'center' });
 
-                        <div class="termo-content">
-                            <p>
-                                Eu, <span class="termo-nome" id="termoNome">[NOME DO COLABORADOR]</span>, residente no
-                                endereço
-                                <span class="termo-endereco" id="termoEndereco">[ENDEREÇO COMPLETO]</span>,
-                                DECLARO que todas as informações apresentadas neste Relatório de Passagem foram por mim
-                                fornecidas
-                                de forma verdadeira, completa e correspondente ao meu efetivo deslocamento entre a
-                                residência
-                                e o local de trabalho, e vice-versa.
-                            </p>
-                            <p>
-                                Reconheço que é de minha exclusiva responsabilidade o correto preenchimento deste
-                                documento,
-                                incluindo as integrações tarifárias utilizadas, quando aplicável.
-                            </p>
-                            <p>
-                                Estou ciente de que qualquer informação incorreta, omissão, adulteração ou preenchimento
-                                que resulte em vantagem indevida ou prejuízo à empresa poderá caracterizar falta
-                                disciplinar,
-                                sujeitando-me às medidas previstas na Consolidação das Leis do Trabalho (CLT), bem como
-                                nas
-                                normas internas da empresa.
-                            </p>
-                        </div>
+            doc.setFontSize(10);
+            let yPosition = 30;
 
-                        <div class="checkbox-container">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="autorizacao" required>
-                                <span class="checkmark"></span>
-                                <span class="checkbox-text">
-                                    Li e concordo com os termos acima descritos
-                                </span>
-                            </label>
-                        </div>
-                    </div>
+            const colaboradorFields = [
+                `NOME: ${colaboradorData.nomeCompleto}`,
+                `ENDEREÇO: ${colaboradorData.endereco}`,
+                `BAIRRO: ${colaboradorData.bairro}`,
+                `CIDADE: ${colaboradorData.cidade}`,
+                `TELEFONE: ${colaboradorData.telefone}`,
+                `DATA DE ENVIO: ${formatDate(colaboradorData.dataEnvio)}`,
+                `TIPO DE RELATÓRIO: ${colaboradorData.tipoRelatorio}`,
+                colaboradorData.tipoRelatorio === 'REEMBOLSO' && colaboradorData.periodoReembolso
+                    ? `PERÍODO DO REEMBOLSO: ${formatDate(colaboradorData.periodoReembolso.dataInicio)} até ${formatDate(colaboradorData.periodoReembolso.dataFim)}`
+                    : null,
+                `EQUIPE: ${colaboradorData.equipe}`
+            ].filter(Boolean);
 
-                    <!-- Assinatura Digital -->
-                    <div id="assinaturaContainer" class="assinatura-container">
-                        <div class="assinatura-header">
-                            <i class="fas fa-signature"></i>
-                            <h3>Assinatura Digital</h3>
-                            <span class="required-badge">Opcional</span>
-                        </div>
+            colaboradorFields.forEach(field => {
+                doc.text(field, 14, yPosition);
+                yPosition += 10;
+            });
 
-                        <div class="assinatura-instruction">
-                            <i class="fas fa-info-circle"></i>
-                            <p>Assine na área abaixo para autorizar o relatório (opcional)</p>
-                        </div>
+            yPosition += 10;
 
-                        <div class="signature-instructions">
-                            <div class="instruction-desktop">
-                                <i class="fas fa-mouse-pointer"></i>
-                                <p>Clique e arraste com o mouse para assinar abaixo</p>
-                            </div>
-                            <div class="instruction-mobile">
-                                <i class="fas fa-hand-pointer"></i>
-                                <p>Toque e arraste com o dedo para assinar abaixo</p>
-                            </div>
-                        </div>
+            // Termo de Autorização
+            doc.setFontSize(12);
+            doc.text("TERMO DE AUTORIZAÇÃO", 105, yPosition, { align: 'center' });
+            yPosition += 10;
 
-                        <div class="assinatura-preview">
-                            <div class="preview-container">
-                                <div class="canvas-wrapper" id="assinaturaTrigger">
-                                    <canvas id="canvasColaborador"></canvas>
-                                    <div class="canvas-placeholder">
-                                        <i class="fas fa-signature"></i>
-                                        <p>Área de assinatura (opcional)</p>
-                                    </div>
-                                </div>
-                                <div class="assinatura-controls">
-                                    <button type="button" id="limparAssinaturaColaborador" class="btn btn-limpar">
-                                        <i class="fas fa-eraser"></i> Limpar
-                                    </button>
-                                    <button type="button" id="openFullscreenBtn" class="btn btn-secondary">
-                                        <i class="fas fa-expand"></i> Tela Cheia
-                                    </button>
-                                </div>
-                            </div>
-                            <p class="assinatura-hint">
-                                <i class="fas fa-lightbulb"></i>
-                                Assinatura opcional - você pode prosseguir sem assinar
-                            </p>
-                        </div>
-                    </div>
+            doc.setFontSize(10);
+            const autorizacaoText = [
+                `Eu, ${colaboradorData.nomeCompleto}, residente no endereço ${colaboradorData.endereco}, `,
+                `${colaboradorData.bairro}, ${colaboradorData.cidade}, DECLARO que todas as informações apresentadas `,
+                "neste Relatório de Passagem foram por mim fornecidas de forma verdadeira, completa e correspondente ",
+                "ao meu efetivo deslocamento entre a residência e o local de trabalho, e vice-versa.",
+                "Reconheço que é de minha exclusiva responsabilidade o correto preenchimento deste documento, ",
+                "incluindo, as integrações tarifárias utilizadas, quando aplicável.",
+                "Estou ciente de que qualquer informação incorreta, omissão, adulteração ou preenchimento que resulte ",
+                "em vantagem indevida ou prejuízo à empresa poderá caracterizar falta disciplinar, sujeitando-me às ",
+                "medidas previstas na Consolidação das Leis do Trabalho (CLT), bem como nas normas internas da empresa."
+            ];
 
-                    <!-- Botão de Autorização -->
-                    <div class="form-actions">
-                        <button type="submit" id="btnAutorizar" class="btn btn-primary btn-large">
-                            <i class="fas fa-check-circle"></i>
-                            <span>PROSSEGUIR PARA REGISTRO DE PASSAGENS</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                        <div class="form-hint">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Preencha todos os campos obrigatórios para continuar
-                        </div>
-                    </div>
-                </form>
-            </section>
+            doc.text(autorizacaoText, 15, yPosition, { maxWidth: 180, align: 'justify' });
 
-            <!-- Etapa 2: Registro de Passagens -->
-            <section id="etapa2" class="form-section">
-                <div class="section-header">
-                    <div class="back-button" id="backButton">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Voltar</span>
-                    </div>
-                    <div class="section-title">
-                        <i class="fas fa-bus"></i>
-                        <h2>Registro de Passagens</h2>
-                    </div>
-                    <div class="colaborador-info">
-                        <div class="info-badge">
-                            <i class="fas fa-user"></i>
-                            <span id="colaboradorNome">NOME DO COLABORADOR</span>
-                        </div>
-                    </div>
-                </div>
+            // Assinatura - layout centralizado e mais limpo
+            yPosition += 70;
+            const linhaY = yPosition + 20;
 
-                <!-- Formulário de Passagem -->
-                <form id="reportForm" class="passagem-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="dataVisita">
-                                <i class="fas fa-calendar-day"></i> Dia da Semana *
-                            </label>
-                            <select id="dataVisita" required>
-                                <option value="">Selecione...</option>
-                                <option value="segunda-feira">Segunda-feira</option>
-                                <option value="terça-feira">Terça-feira</option>
-                                <option value="quarta-feira">Quarta-feira</option>
-                                <option value="quinta-feira">Quinta-feira</option>
-                                <option value="sexta-feira">Sexta-feira</option>
-                                <option value="sábado">Sábado</option>
-                            </select>
-                        </div>
+            // Linha de assinatura centralizada
+            const linhaLargura = 80;
+            const linhaXInicio = 105 - linhaLargura / 2;
+            const linhaXFim = 105 + linhaLargura / 2;
 
-                        <div class="form-group">
-                            <label for="ida">
-                                <i class="fas fa-map-pin"></i> Origem *
-                            </label>
-                            <input type="text" id="ida" required placeholder="Local de partida">
-                        </div>
+            doc.setDrawColor(0);
+            doc.setLineWidth(0.5);
+            doc.line(linhaXInicio, linhaY, linhaXFim, linhaY);
 
-                        <div class="form-group">
-                            <label for="destino">
-                                <i class="fas fa-flag-checkered"></i> Destino *
-                            </label>
-                            <input type="text" id="destino" required placeholder="Local de destino">
-                        </div>
-                    </div>
+            // Assinatura (imagem) um pouco acima da linha
+            if (colaboradorData.assinaturaColaborador && colaboradorData.assinaturaColaborador !== 'data:,') {
+                try {
+                    doc.addImage(
+                        colaboradorData.assinaturaColaborador,
+                        'PNG',
+                        linhaXInicio,
+                        linhaY - 18,
+                        linhaLargura,
+                        18
+                    );
+                } catch (error) {
+                    console.log('Não foi possível incluir assinatura no PDF');
+                }
+            }
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="bilhetagem">
-                                <i class="fas fa-ticket-alt"></i> Tipo de Bilhetagem *
-                            </label>
-                            <select id="bilhetagem" required>
-                                <option value="">Selecione...</option>
-                                <option value="rio card">Rio Card</option>
-                                <option value="jaé">Jaé</option>
-                                <option value="outros">Outros</option>
-                            </select>
-                        </div>
+            // Legenda abaixo da linha
+            doc.setFontSize(9);
+            doc.text("ASSINATURA DO FUNCIONÁRIO", 105, linhaY + 6, { align: 'center' });
 
-                        <div id="otherField" class="form-group hidden">
-                            <label for="other">
-                                <i class="fas fa-edit"></i> Especifique o tipo *
-                            </label>
-                            <input type="text" id="other" placeholder="Digite o tipo de bilhetagem">
-                        </div>
-                    </div>
+            // Página 2: Passagens detalhadas
+            doc.addPage();
+            doc.setFontSize(16);
+            doc.text("PASSAGENS REGISTRADAS", 105, 20, { align: 'center' });
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="modal">
-                                <i class="fas fa-subway"></i> Modal de Transporte *
-                            </label>
-                            <select id="modal" required>
-                                <option value="">Selecione a bilhetagem primeiro</option>
-                            </select>
-                        </div>
+            doc.autoTable({
+                startY: 30,
+                head: [['DIA', 'ORIGEM', 'DESTINO', 'BILHETAGEM', 'MODAL', 'VALOR', 'INTEGRAÇÃO']],
+                body: reports.map(report => [
+                    report.dataVisita,
+                    report.ida,
+                    report.destino,
+                    report.bilhetagem,
+                    report.modal,
+                    'R$ ' + report.valor.toFixed(2),
+                    report.integracao || 'NÃO'
+                ]),
+                margin: { horizontal: 15 },
+                styles: { fontSize: 8, cellPadding: 3 },
+                headerStyles: { fillColor: [44, 62, 80], textColor: 255 }
+            });
 
-                        <div id="numeroLinhaContainer" class="form-group hidden">
-                            <label for="numeroLinha">
-                                <i class="fas fa-hashtag"></i> Número da Linha
-                            </label>
-                            <input type="text" id="numeroLinha" placeholder="Ex: 123">
-                        </div>
+            // Página 3: Resumo
+            doc.addPage();
+            const total = reports.reduce((sum, r) => sum + r.valor, 0);
+            const dias = new Set(reports.map(r => r.dataVisita)).size;
+            const media = dias > 0 ? total / dias : 0;
 
-                        <div id="tipoLinhaContainer" class="form-group hidden">
-                            <label for="tipoLinha">
-                                <i class="fas fa-route"></i> Tipo de Linha
-                            </label>
-                            <select id="tipoLinha">
-                                <option value="">Selecione...</option>
-                            </select>
-                        </div>
-                    </div>
+            doc.setFontSize(16);
+            doc.text("RESUMO FINANCEIRO", 105, 20, { align: 'center' });
 
-                    <div class="form-row">
-                        <div id="valorContainer" class="form-group">
-                            <label for="valor">
-                                <i class="fas fa-money-bill-wave"></i> Valor (R$) *
-                            </label>
-                            <div class="valor-input-wrapper">
-                                <span class="valor-prefix">R$</span>
-                                <input type="text" id="valor" required placeholder="0,00" oninput="formatValor(this)">
-                            </div>
-                            <small class="valor-hint">Use vírgula para centavos (ex: 5,50)</small>
-                        </div>
-                    </div>
+            doc.setFontSize(12);
+            doc.text(`Total de Passagens: ${reports.length}`, 20, 40);
+            doc.text(`Total Gasto: R$ ${total.toFixed(2)}`, 20, 50);
+            doc.text(`Dias com Registro: ${dias}`, 20, 60);
+            doc.text(`Média Diária: R$ ${media.toFixed(2)}`, 20, 70);
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success btn-large">
-                            <i class="fas fa-plus-circle"></i>
-                            <span>ADICIONAR PASSAGEM</span>
-                        </button>
-                    </div>
-                </form>
+            // Totais por dia
+            doc.setFontSize(14);
+            doc.text("TOTAIS POR DIA DA SEMANA", 105, 90, { align: 'center' });
 
-                <!-- Lista de Passagens Registradas -->
-                <div class="passagens-list">
-                    <div class="list-header">
-                        <h3>
-                            <i class="fas fa-list-alt"></i>
-                            Passagens Registradas
-                            <span class="badge" id="totalPassagens">0</span>
-                        </h3>
-                        <div class="list-actions">
-                            <button id="exportPdfButton" class="btn btn-export">
-                                <i class="fas fa-file-pdf"></i> Exportar PDF
-                            </button>
-                            <button id="clearAllButton" class="btn btn-danger">
-                                <i class="fas fa-trash-alt"></i> Limpar Tudo
-                            </button>
-                        </div>
-                    </div>
+            let yPos = 100;
+            for (const [day, totalDay] of Object.entries(dailyTotals)) {
+                doc.setFontSize(10);
+                doc.text(`${day}: R$ ${totalDay.toFixed(2)}`, 20, yPos);
+                yPos += 10;
+            }
 
-                    <div class="table-container">
-                        <table id="reportTable">
-                            <thead>
-                                <tr>
-                                    <th><i class="fas fa-calendar"></i> DIA</th>
-                                    <th><i class="fas fa-map-marker-alt"></i> ORIGEM</th>
-                                    <th><i class="fas fa-flag"></i> DESTINO</th>
-                                    <th><i class="fas fa-ticket-alt"></i> BILHETAGEM</th>
-                                    <th><i class="fas fa-subway"></i> MODAL</th>
-                                    <th><i class="fas fa-exchange-alt"></i> INTEGRAÇÃO</th>
-                                    <th><i class="fas fa-money-bill"></i> VALOR</th>
-                                    <th><i class="fas fa-cog"></i> AÇÕES</th>
-                                </tr>
-                            </thead>
-                            <tbody id="reportTableBody">
-                                <!-- Passagens serão adicionadas aqui -->
-                                <tr class="empty-row">
-                                    <td colspan="8">
-                                        <div class="empty-state">
-                                            <i class="fas fa-clipboard-list"></i>
-                                            <p>Nenhuma passagem registrada ainda</p>
-                                            <small>Adicione sua primeira passagem usando o formulário acima</small>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+            doc.save(`Relatorio_Passagem_${colaboradorData.nomeCompleto.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
 
-                    <!-- Resumo de Valores -->
-                    <div class="resumo-container">
-                        <h3>
-                            <i class="fas fa-chart-bar"></i>
-                            Resumo Financeiro
-                        </h3>
-                        <div class="resumo-grid">
-                            <div class="resumo-card">
-                                <div class="resumo-icon total">
-                                    <i class="fas fa-wallet"></i>
-                                </div>
-                                <div class="resumo-content">
-                                    <h4>Total Semanal</h4>
-                                    <p class="resumo-valor" id="totalSemanal">R$ 0,00</p>
-                                </div>
-                            </div>
+            showToast('PDF exportado com sucesso!');
+        } catch (error) {
+            console.error('Erro ao exportar PDF:', error);
+            showToast('Erro ao exportar PDF. Por favor, tente novamente.', 'error');
+        }
+    }
 
-                            <div class="resumo-card">
-                                <div class="resumo-icon media">
-                                    <i class="fas fa-calculator"></i>
-                                </div>
-                                <div class="resumo-content">
-                                    <h4>Média Diária</h4>
-                                    <p class="resumo-valor" id="mediaDiaria">R$ 0,00</p>
-                                </div>
-                            </div>
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
 
-                            <div class="resumo-card">
-                                <div class="resumo-icon dias">
-                                    <i class="fas fa-calendar-week"></i>
-                                </div>
-                                <div class="resumo-content">
-                                    <h4>Dias com Registro</h4>
-                                    <p class="resumo-valor" id="diasRegistro">0</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Totais por Dia -->
-                        <div class="totais-dia">
-                            <h4><i class="fas fa-calendar-check"></i> Totais por Dia da Semana</h4>
-                            <ul id="totalsList">
-                                <!-- Totais serão exibidos aqui -->
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer>
-            <div class="footer-content">
-                <div class="footer-logo">
-                    <div class="logo-placeholder small">
-                        <i class="fas fa-bus"></i>
-                    </div>
-                    <p>Objetiva MKT</p>
-                </div>
-                <div class="footer-info">
-                    <p>
-                        <i class="fas fa-shield-alt"></i>
-                        Sistema seguro de registro de deslocamentos
-                    </p>
-                    <p class="footer-copyright">
-                        © 2024 Sistema de Relatórios. Todos os direitos reservados.
-                    </p>
-                </div>
-            </div>
-        </footer>
-    </div>
-
-    <!-- Modal de Integração -->
-    <div id="integracaoModal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <i class="fas fa-exchange-alt"></i>
-                <h3>Integração Tarifária</h3>
-            </div>
-            <div class="modal-body">
-                <p>Valor informado: <strong id="valorIntegracao">R$ 0,00</strong></p>
-                <p class="modal-question">Este valor corresponde a uma integração tarifária?</p>
-                <div class="modal-hint">
-                    <i class="fas fa-info-circle"></i>
-                    <small>Integração: pagamento de valor reduzido para conexão entre diferentes modais</small>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button id="btnSimIntegracao" class="btn btn-success">
-                    <i class="fas fa-check"></i> SIM, é integração
-                </button>
-                <button id="btnNaoIntegracao" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> NÃO, é valor normal
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tela Cheia de Assinatura -->
-    <div id="fullscreenSignature" class="fullscreen-signature hidden">
-        <div class="fullscreen-header">
-            <div class="header-left">
-                <i class="fas fa-signature"></i>
-                <div>
-                    <h2>Assine Aqui</h2>
-                    <p class="header-subtitle">Use o mouse ou dedo para assinar na área abaixo</p>
-                </div>
-            </div>
-            <button id="closeFullscreen" class="btn-close" aria-label="Fechar">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <div class="orientation-alert hidden" id="orientationAlert">
-            <i class="fas fa-mobile-alt"></i>
-            <p>Para melhor experiência, gire seu dispositivo para o modo paisagem</p>
-        </div>
-
-        <div class="canvas-container">
-            <canvas id="fullscreenCanvas"></canvas>
-            <div class="canvas-overlay" id="canvasOverlay">
-                <div class="overlay-icon">
-                    <i class="fas fa-hand-pointer"></i>
-                </div>
-                <p>Clique e arraste para assinar</p>
-                <small>Assine com calma, você pode limpar e refazer</small>
-            </div>
-        </div>
-
-        <div class="signature-controls">
-            <div class="control-buttons">
-                <button id="clearFullscreen" class="btn btn-limpar">
-                    <i class="fas fa-trash-alt"></i> Limpar
-                </button>
-                <button id="confirmSignature" class="btn btn-success">
-                    <i class="fas fa-check"></i> Confirmar Assinatura
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast de Notificação -->
-    <div id="toast" class="toast hidden">
-        <div class="toast-content">
-            <i class="fas fa-check-circle"></i>
-            <div class="toast-message">Operação realizada com sucesso!</div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <script src="app.js"></script>
-</body>
-
-</html>
-
+    // ===== INICIALIZAR APLICAÇÃO =====
+    init();
+});
