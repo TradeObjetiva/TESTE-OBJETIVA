@@ -114,13 +114,6 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         'outros': {
             modais: [
-                { value: 'ônibus', label: 'Ônibus' },
-                { value: 'metrô', label: 'Metrô' },
-                { value: 'trem', label: 'Trem' },
-                { value: 'van', label: 'Van' },
-                { value: 'barcas', label: 'Barcas' },
-                { value: 'brt', label: 'BRT' },
-                { value: 'vlt', label: 'VLT' },
                 { value: 'a pé', label: 'A Pé' }
             ],
             tipoLinha: [
@@ -1300,3 +1293,4 @@ document.addEventListener("DOMContentLoaded", function () {
     // ===== INICIALIZAR APLICAÇÃO =====
     init();
 });
+
