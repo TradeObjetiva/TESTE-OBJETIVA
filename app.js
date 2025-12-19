@@ -841,15 +841,25 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // Decidir se mostra o modal de integração
-        const valorPassagemTipica = 5.00;
+        // IMPORTANTE: Modal de integração só aparece a partir da 2ª passagem do dia
+        // (sem limitação de valor - pode ser qualquer valor)
 
-        if (reportData.valor > 0 && reportData.valor < valorPassagemTipica) {
+        // Contar quantas passagens já existem no mesmo dia
+        const passagensDoDia = reports.filter(r =>
+            r.dataVisita.toLowerCase() === reportData.dataVisita.toLowerCase()
+        ).length;
+
+        // Só mostrar modal de integração se já existe pelo menos 1 passagem no mesmo dia
+        // (não é a primeira passagem do dia)
+        const naoEhPrimeiraPassagemDoDia = passagensDoDia >= 1;
+
+        if (naoEhPrimeiraPassagemDoDia) {
             valorIntegracao.textContent = `R$ ${valor.toFixed(2)}`;
             // Remover classe "hidden" para exibir o modal corretamente
             integracaoModal.classList.remove('hidden');
             integracaoModal.currentReport = reportData;
         } else {
-            // Valores normais, não é integração
+            // É a primeira passagem do dia (não pode ser integração)
             reportData.integracao = 'NÃO';
             addReportDirectly(reportData);
         }
