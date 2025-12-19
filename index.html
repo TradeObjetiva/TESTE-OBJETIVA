@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Relatório de Passagem - Objetiva MKT</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
@@ -500,6 +500,64 @@
                 </button>
                 <button id="btnNaoIntegracao" class="btn btn-secondary">
                     <i class="fas fa-times"></i> NÃO, é valor normal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação de Integração -->
+    <div id="confirmacaoIntegracaoModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-edit"></i>
+                <h3>Confirmar Integração Tarifária</h3>
+            </div>
+            <div class="modal-body">
+                <div class="integracao-info">
+                    <h4><i class="fas fa-bus"></i> Primeira Passagem (será atualizada)</h4>
+                    <div class="passagem-detalhes">
+                        <p><strong>Dia:</strong> <span id="modalPrimeiraDia">-</span></p>
+                        <p><strong>Origem:</strong> <span id="modalPrimeiraOrigem">-</span></p>
+                        <p><strong>Destino:</strong> <span id="modalPrimeiraDestino">-</span></p>
+                        <p><strong>Modal:</strong> <span id="modalPrimeiraModal">-</span></p>
+                        <p><strong>Valor atual:</strong> <span id="modalPrimeiraValorAtual">R$ 0,00</span></p>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="valorIntegracaoEdit">
+                            <i class="fas fa-money-bill-wave"></i> Novo Valor da Integração (R$)
+                        </label>
+                        <div class="valor-input-wrapper">
+                            <span class="valor-prefix">R$</span>
+                            <input type="text" id="valorIntegracaoEdit" placeholder="0,00" oninput="formatValor(this)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="integracao-info"
+                    style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--light);">
+                    <h4><i class="fas fa-subway"></i> Segunda Passagem (será zerada)</h4>
+                    <div class="passagem-detalhes">
+                        <p><strong>Dia:</strong> <span id="modalSegundaDia">-</span></p>
+                        <p><strong>Origem:</strong> <span id="modalSegundaOrigem">-</span></p>
+                        <p><strong>Destino:</strong> <span id="modalSegundaDestino">-</span></p>
+                        <p><strong>Modal:</strong> <span id="modalSegundaModal">-</span></p>
+                        <p><strong>Valor:</strong> <span style="color: var(--danger); font-weight: bold;">R$ 0,00 (será
+                                zerado)</span></p>
+                    </div>
+                </div>
+
+                <div class="modal-hint" style="margin-top: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    <small>O valor da integração será aplicado à primeira passagem e a segunda será zerada.</small>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="btnCancelarIntegracao" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="btnConfirmarIntegracao" class="btn btn-success">
+                    <i class="fas fa-check"></i> Confirmar Integração
                 </button>
             </div>
         </div>
