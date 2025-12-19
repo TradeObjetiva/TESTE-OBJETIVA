@@ -1018,6 +1018,7 @@ footer {
 
 .modal-body {
     margin-bottom: 25px;
+    overflow-y: auto;
 }
 
 .modal-body p {
@@ -1103,10 +1104,113 @@ footer {
 
 #confirmacaoIntegracaoModal .modal-content {
     max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+#confirmacaoIntegracaoModal .modal-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 #confirmacaoIntegracaoModal .form-group {
     margin-bottom: 0;
+}
+
+/* Responsividade para modal de integração */
+@media (max-width: 768px) {
+    #confirmacaoIntegracaoModal .modal-content {
+        max-width: 95%;
+        max-height: 95vh;
+        padding: 20px 15px;
+    }
+
+    #confirmacaoIntegracaoModal .modal-header {
+        margin-bottom: 15px;
+    }
+
+    #confirmacaoIntegracaoModal .modal-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .integracao-info {
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+
+    .integracao-info h4 {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+
+    .passagem-detalhes {
+        padding: 10px;
+        margin-top: 8px;
+    }
+
+    .passagem-detalhes p {
+        margin: 6px 0;
+        font-size: 0.85rem;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .passagem-detalhes p strong {
+        margin-bottom: 2px;
+    }
+
+    #confirmacaoIntegracaoModal .modal-body {
+        padding: 0;
+    }
+
+    #confirmacaoIntegracaoModal .modal-actions {
+        margin-top: 15px;
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding-top: 15px;
+        border-top: 1px solid var(--light);
+    }
+}
+
+@media (max-width: 480px) {
+    #confirmacaoIntegracaoModal .modal-content {
+        padding: 15px 12px;
+        max-height: 98vh;
+    }
+
+    #confirmacaoIntegracaoModal .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .integracao-info {
+        padding: 10px;
+    }
+
+    .integracao-info h4 {
+        font-size: 0.85rem;
+    }
+
+    .passagem-detalhes {
+        padding: 8px;
+    }
+
+    .passagem-detalhes p {
+        font-size: 0.8rem;
+        margin: 4px 0;
+    }
+
+    .modal-hint {
+        padding: 10px 12px;
+        font-size: 0.8rem;
+    }
+
+    .modal-hint small {
+        font-size: 0.75rem;
+    }
 }
 
 /* ===== TELA CHEIA DE ASSINATURA ===== */
