@@ -1061,6 +1061,54 @@ footer {
     margin-top: 25px;
 }
 
+/* ===== MODAL DE CONFIRMAÇÃO DE INTEGRAÇÃO ===== */
+.integracao-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--secondary);
+}
+
+.integracao-info h4 {
+    color: var(--primary);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.integracao-info h4 i {
+    color: var(--secondary);
+}
+
+.passagem-detalhes {
+    background: white;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    margin-top: 10px;
+}
+
+.passagem-detalhes p {
+    margin: 8px 0;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.passagem-detalhes p strong {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+#confirmacaoIntegracaoModal .modal-content {
+    max-width: 600px;
+}
+
+#confirmacaoIntegracaoModal .form-group {
+    margin-bottom: 0;
+}
+
 /* ===== TELA CHEIA DE ASSINATURA ===== */
 .fullscreen-signature {
     position: fixed;
