@@ -30,6 +30,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const mediaPorPassagemCell = document.getElementById('mediaPorPassagemCell');
     const valorIntegracao = document.getElementById('valorIntegracao');
     const toast = document.getElementById('toast');
+    const confirmacaoIntegracaoModal = document.getElementById('confirmacaoIntegracaoModal');
+    const valorIntegracaoEdit = document.getElementById('valorIntegracaoEdit');
 
     // Elementos da assinatura
     const canvasColaborador = document.getElementById('canvasColaborador');
@@ -51,6 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let dailyTotals = {};
     let colaboradorData = {};
     let assinaturaColaborador = null;
+    let editingIndex = null; // índice da passagem que está sendo editada
     let isDrawing = false;
     let isDrawingFullscreen = false;
     let ctxColaborador;
@@ -184,6 +187,10 @@ document.addEventListener("DOMContentLoaded", function () {
         // Modal de integração
         document.getElementById('btnSimIntegracao').addEventListener('click', handleIntegracaoSim);
         document.getElementById('btnNaoIntegracao').addEventListener('click', handleIntegracaoNao);
+
+        // Modal de confirmação de integração
+        document.getElementById('btnConfirmarIntegracao').addEventListener('click', handleConfirmarIntegracao);
+        document.getElementById('btnCancelarIntegracao').addEventListener('click', handleCancelarIntegracao);
 
         console.log('Event listeners configurados!');
     }
@@ -803,9 +810,33 @@ document.addEventListener("DOMContentLoaded", function () {
             reportData.tipoLinha = '';
         }
 
-        // Verificar se é duplicado
-        if (isDuplicateReport(reportData)) {
+        // Verificar se é duplicado (apenas quando NÃO estiver editando)
+        if (editingIndex === null && isDuplicateReport(reportData)) {
             showToast('Este relatório parece ser duplicado. Verifique os dados.', 'warning');
+            return;
+        }
+
+        // Se estiver editando uma passagem existente, apenas atualiza os dados
+        if (editingIndex !== null) {
+            // Preservar informação de integração já existente, se houver
+            if (reports[editingIndex] && reports[editingIndex].integracao) {
+                reportData.integracao = reports[editingIndex].integracao;
+            } else if (!reportData.integracao) {
+                reportData.integracao = 'NÃO';
+            }
+
+            reports[editingIndex] = reportData;
+            rebuildReportTable();
+            updateTotals();
+            updateResumo();
+            showToast('Passagem atualizada com sucesso!');
+
+            // Resetar formulário e voltar ao modo "adicionar"
+            reportForm.reset();
+            document.getElementById('dataVisita').value = '';
+            updateModalOptions('rio card');
+            handleModalChange();
+            resetReportFormToCreateMode();
             return;
         }
 
@@ -834,10 +865,126 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function handleIntegracaoSim() {
         const reportData = integracaoModal.currentReport;
-        reportData.integracao = 'SIM';
-        addReportDirectly(reportData);
+
+        // Verificar se existe uma passagem anterior
+        if (reports.length === 0) {
+            showToast('Não há passagem anterior para vincular a integração. Adicione uma passagem primeiro.', 'warning');
+            integracaoModal.classList.add('hidden');
+            integracaoModal.currentReport = null;
+            return;
+        }
+
+        // Pegar a última passagem adicionada (primeira da integração)
+        const primeiraPassagem = reports[reports.length - 1];
+
+        // Preencher o modal de confirmação com os dados
+        preencherModalConfirmacaoIntegracao(primeiraPassagem, reportData);
+
+        // Fechar modal de integração e abrir modal de confirmação
         integracaoModal.classList.add('hidden');
-        integracaoModal.currentReport = null;
+        confirmacaoIntegracaoModal.classList.remove('hidden');
+    }
+
+    function preencherModalConfirmacaoIntegracao(primeiraPassagem, segundaPassagem) {
+        // Preencher dados da primeira passagem
+        document.getElementById('modalPrimeiraDia').textContent = primeiraPassagem.dataVisita || '-';
+        document.getElementById('modalPrimeiraOrigem').textContent = primeiraPassagem.ida || '-';
+        document.getElementById('modalPrimeiraDestino').textContent = primeiraPassagem.destino || '-';
+        document.getElementById('modalPrimeiraModal').textContent = primeiraPassagem.modal || '-';
+        document.getElementById('modalPrimeiraValorAtual').textContent = `R$ ${(primeiraPassagem.valor || 0).toFixed(2)}`;
+
+        // Preencher dados da segunda passagem
+        document.getElementById('modalSegundaDia').textContent = segundaPassagem.dataVisita || '-';
+        document.getElementById('modalSegundaOrigem').textContent = segundaPassagem.ida || '-';
+        document.getElementById('modalSegundaDestino').textContent = segundaPassagem.destino || '-';
+        document.getElementById('modalSegundaModal').textContent = segundaPassagem.modal || '-';
+
+        // Preencher campo de valor da integração com o valor informado
+        const valorFormatado = (segundaPassagem.valor || 0).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        valorIntegracaoEdit.value = valorFormatado;
+
+        // Armazenar referências para uso na confirmação
+        confirmacaoIntegracaoModal.primeiraPassagemIndex = reports.length - 1;
+        confirmacaoIntegracaoModal.segundaPassagemData = segundaPassagem;
+    }
+
+    function handleConfirmarIntegracao() {
+        // Validar valor informado
+        let valorInput = valorIntegracaoEdit.value.trim();
+        valorInput = valorInput.replace(/[^\d.,]/g, '');
+        valorInput = valorInput.replace(',', '.');
+
+        const partes = valorInput.split('.');
+        if (partes.length > 2) {
+            valorInput = partes.slice(0, -1).join('') + '.' + partes[partes.length - 1];
+        }
+
+        const valorIntegracao = parseFloat(valorInput) || 0;
+
+        if (valorIntegracao < 0) {
+            showToast('O valor não pode ser negativo.', 'error');
+            return;
+        }
+
+        if (valorIntegracao === 0) {
+            showToast('Por favor, informe um valor válido para a integração.', 'error');
+            return;
+        }
+
+        // Pegar referências armazenadas
+        const primeiraIndex = confirmacaoIntegracaoModal.primeiraPassagemIndex;
+        const segundaPassagemData = confirmacaoIntegracaoModal.segundaPassagemData;
+
+        if (primeiraIndex === undefined || primeiraIndex < 0 || primeiraIndex >= reports.length) {
+            showToast('Erro ao processar integração. Tente novamente.', 'error');
+            confirmacaoIntegracaoModal.classList.add('hidden');
+            return;
+        }
+
+        // Atualizar primeira passagem: alterar valor e marcar como integração
+        reports[primeiraIndex].valor = valorIntegracao;
+        reports[primeiraIndex].integracao = 'SIM';
+
+        // Adicionar segunda passagem: zerar valor e marcar como integração
+        segundaPassagemData.valor = 0;
+        segundaPassagemData.integracao = 'SIM';
+        reports.push(segundaPassagemData);
+
+        // Reconstruir tabela e atualizar totais
+        rebuildReportTable();
+        updateTotals();
+        updateResumo();
+
+        // Fechar modal e resetar formulário
+        confirmacaoIntegracaoModal.classList.add('hidden');
+        reportForm.reset();
+        document.getElementById('dataVisita').value = '';
+        updateModalOptions('rio card');
+        handleModalChange();
+
+        // Limpar referências
+        confirmacaoIntegracaoModal.primeiraPassagemIndex = null;
+        confirmacaoIntegracaoModal.segundaPassagemData = null;
+
+        showToast('Integração confirmada! Valor da primeira passagem atualizado e segunda zerada.', 'success');
+    }
+
+    function handleCancelarIntegracao() {
+        // Fechar modal e limpar referências
+        confirmacaoIntegracaoModal.classList.add('hidden');
+        confirmacaoIntegracaoModal.primeiraPassagemIndex = null;
+        confirmacaoIntegracaoModal.segundaPassagemData = null;
+
+        // Resetar formulário
+        reportForm.reset();
+        document.getElementById('dataVisita').value = '';
+        updateModalOptions('rio card');
+        handleModalChange();
+
+        showToast('Operação cancelada.', 'info');
     }
 
     function handleIntegracaoNao() {
@@ -895,13 +1042,25 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         const acoes = document.createElement('td');
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'btn btn-danger btn-small';
-        button.innerHTML = '<i class="fas fa-trash"></i>';
-        button.title = 'Remover passagem';
-        button.onclick = function () { removeReport(this); };
-        acoes.appendChild(button);
+
+        // Botão de edição
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'btn btn-secondary btn-small';
+        editButton.innerHTML = '<i class="fas fa-pen"></i>';
+        editButton.title = 'Editar passagem';
+        editButton.onclick = function () { editReport(this); };
+        acoes.appendChild(editButton);
+
+        // Botão de remoção
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'btn btn-danger btn-small';
+        deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteButton.title = 'Remover passagem';
+        deleteButton.onclick = function () { removeReport(this); };
+        acoes.appendChild(deleteButton);
+
         row.appendChild(acoes);
 
         reportTableBody.appendChild(row);
@@ -967,6 +1126,16 @@ document.addEventListener("DOMContentLoaded", function () {
         reports.splice(index, 1);
         row.remove();
 
+        // Ajustar estado de edição se necessário
+        if (editingIndex !== null) {
+            if (index === editingIndex) {
+                editingIndex = null;
+                resetReportFormToCreateMode();
+            } else if (index < editingIndex) {
+                editingIndex -= 1;
+            }
+        }
+
         // Se não houver mais passagens, mostrar linha vazia
         if (reports.length === 0) {
             const emptyRow = document.createElement('tr');
@@ -987,6 +1156,81 @@ document.addEventListener("DOMContentLoaded", function () {
         updateResumo();
         showToast('Passagem removida com sucesso!');
     };
+
+    // Função global para editar relatórios
+    window.editReport = function (button) {
+        const row = button.closest('tr');
+        const index = Array.from(reportTableBody.children).indexOf(row);
+
+        const report = reports[index];
+        if (!report) return;
+
+        editingIndex = index;
+
+        // Preencher formulário com os dados existentes
+        document.getElementById('dataVisita').value = (report.dataVisita || '').toLowerCase();
+        document.getElementById('ida').value = report.ida || '';
+        document.getElementById('destino').value = report.destino || '';
+
+        const bilhetagemLower = (report.bilhetagem || '').toLowerCase();
+        document.getElementById('bilhetagem').value = bilhetagemLower;
+        updateModalOptions(bilhetagemLower || 'rio card');
+
+        const modalLower = (report.modal || '').toLowerCase();
+        modalSelect.value = modalLower;
+        handleModalChange();
+
+        document.getElementById('numeroLinha').value = report.numeroLinha || '';
+        document.getElementById('tipoLinha').value = (report.tipoLinha || '').toLowerCase();
+
+        const valorInput = document.getElementById('valor');
+        valorInput.value = (report.valor || 0).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        // Ajustar rótulo do botão para indicar modo de edição
+        const submitButton = reportForm.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.innerHTML = '<i class="fas fa-save"></i><span>SALVAR ALTERAÇÕES</span>';
+            submitButton.classList.remove('btn-success');
+            submitButton.classList.add('btn-primary');
+        }
+
+        showToast('Editando passagem selecionada. Altere os dados e clique em "Salvar alterações".', 'info');
+    };
+
+    function resetReportFormToCreateMode() {
+        editingIndex = null;
+        const submitButton = reportForm.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.innerHTML = '<i class="fas fa-plus-circle"></i><span>ADICIONAR PASSAGEM</span>';
+            submitButton.classList.remove('btn-primary');
+            submitButton.classList.add('btn-success');
+        }
+    }
+
+    function rebuildReportTable() {
+        reportTableBody.innerHTML = '';
+
+        if (reports.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'empty-row';
+            emptyRow.innerHTML = `
+                <td colspan="10">
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <p>Nenhuma passagem registrada ainda</p>
+                        <small>Adicione sua primeira passagem usando o formulário acima</small>
+                    </div>
+                </td>
+            `;
+            reportTableBody.appendChild(emptyRow);
+            return;
+        }
+
+        reports.forEach(r => addReportToTable(r));
+    }
 
     function clearAllReports() {
         if (reports.length === 0) {
@@ -1293,4 +1537,3 @@ document.addEventListener("DOMContentLoaded", function () {
     // ===== INICIALIZAR APLICAÇÃO =====
     init();
 });
-
